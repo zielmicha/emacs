@@ -1,6 +1,11 @@
-2010-08-18 Joakim Verona <joakim@verona.se>
+2010-08-23  Joakim Verona  <joakim@verona.se>
 
-        * config.in, Makefile.in, configure.in: Checks for ImageMagick.
+	* configure.in: Remove missguided AC_DEFINE for
+	HAVE_MAGICKEXPORTIMAGEPIXELS
+
+2010-08-18  Joakim Verona  <joakim@verona.se>
+
+	* Makefile.in, configure.in: Checks for ImageMagick.
 
 2010-08-10  Dan Nicolaescu  <dann@ics.uci.edu>
 

@@ -1,7 +1,7 @@
-2010-08-23  Joakim Verona  <joakim@verona.se>
+2010-08-23  Andreas Schwab  <schwab@linux-m68k.org>
 
-	* configure.in: Remove missguided AC_DEFINE for
-	HAVE_MAGICKEXPORTIMAGEPIXELS
+	* configure.in: Fix check for librsvg, imagemagick and
+	MagickExportImagePixels.
 
 2010-08-18  Joakim Verona  <joakim@verona.se>
 

@@ -1,6 +1,5 @@
 /* undo handling for GNU Emacs.
-   Copyright (C) 1990, 1993, 1994, 2000, 2001, 2002, 2003, 2004,
-                 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1990, 1993-1994, 2000-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -25,17 +24,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "commands.h"
 #include "window.h"
 
-/* Limits controlling how much undo information to keep.  */
-
-EMACS_INT undo_limit;
-EMACS_INT undo_strong_limit;
-
-Lisp_Object Vundo_outer_limit;
-
-/* Function to call when undo_outer_limit is exceeded.  */
-
-Lisp_Object Vundo_outer_limit_function;
-
 /* Last buffer for which undo information was recorded.  */
 /* BEWARE: This is not traced by the GC, so never dereference it!  */
 struct buffer *last_undo_buffer;
@@ -57,17 +45,13 @@ Lisp_Object Qapply;
    an undo-boundary.  */
 Lisp_Object pending_boundary;
 
-/* Nonzero means do not record point in record_point.  */
-
-int undo_inhibit_record_point;
-
 /* Record point as it was at beginning of this command (if necessary)
    and prepare the undo info for recording a change.
    PT is the position of point that will naturally occur as a result of the
    undo record that will be added just after this command terminates.  */
 
 static void
-record_point (int pt)
+record_point (EMACS_INT pt)
 {
   int at_boundary;
 
@@ -129,7 +113,7 @@ record_point (int pt)
    because we don't need to record the contents.)  */
 
 void
-record_insert (int beg, int length)
+record_insert (EMACS_INT beg, EMACS_INT length)
 {
   Lisp_Object lbeg, lend;
 
@@ -164,7 +148,7 @@ record_insert (int beg, int length)
    of the characters in STRING, at location BEG.  */
 
 void
-record_delete (int beg, Lisp_Object string)
+record_delete (EMACS_INT beg, Lisp_Object string)
 {
   Lisp_Object sbeg;
 
@@ -192,7 +176,7 @@ record_delete (int beg, Lisp_Object string)
    won't be inverted automatically by undoing the buffer modification.  */
 
 void
-record_marker_adjustment (Lisp_Object marker, int adjustment)
+record_marker_adjustment (Lisp_Object marker, EMACS_INT adjustment)
 {
   if (EQ (current_buffer->undo_list, Qt))
     return;
@@ -215,7 +199,7 @@ record_marker_adjustment (Lisp_Object marker, int adjustment)
    The replacement must not change the number of characters.  */
 
 void
-record_change (int beg, int length)
+record_change (EMACS_INT beg, EMACS_INT length)
 {
   record_delete (beg, make_buffer_string (beg, beg + length, 1));
   record_insert (beg, length);
@@ -250,7 +234,9 @@ record_first_change (void)
    for LENGTH characters starting at position BEG in BUFFER.  */
 
 void
-record_property_change (int beg, int length, Lisp_Object prop, Lisp_Object value, Lisp_Object buffer)
+record_property_change (EMACS_INT beg, EMACS_INT length,
+			Lisp_Object prop, Lisp_Object value,
+			Lisp_Object buffer)
 {
   Lisp_Object lbeg, lend, entry;
   struct buffer *obuf = current_buffer, *buf = XBUFFER (buffer);
@@ -601,7 +587,7 @@ Return what remains of the list.  */)
 		{
 		  /* Element (STRING . POS) means STRING was deleted.  */
 		  Lisp_Object membuf;
-		  int pos = XINT (cdr);
+		  EMACS_INT pos = XINT (cdr);
 
 		  membuf = car;
 		  if (pos < 0)
@@ -671,7 +657,7 @@ syms_of_undo (void)
   defsubr (&Sprimitive_undo);
   defsubr (&Sundo_boundary);
 
-  DEFVAR_INT ("undo-limit", &undo_limit,
+  DEFVAR_INT ("undo-limit", undo_limit,
 	      doc: /* Keep no more undo information once it exceeds this size.
 This limit is applied when garbage collection happens.
 When a previous command increases the total undo list size past this
@@ -681,7 +667,7 @@ The size is counted as the number of bytes occupied,
 which includes both saved text and other data.  */);
   undo_limit = 80000;
 
-  DEFVAR_INT ("undo-strong-limit", &undo_strong_limit,
+  DEFVAR_INT ("undo-strong-limit", undo_strong_limit,
 	      doc: /* Don't keep more than this much size of undo information.
 This limit is applied when garbage collection happens.
 When a previous command increases the total undo list size past this
@@ -693,7 +679,7 @@ The size is counted as the number of bytes occupied,
 which includes both saved text and other data.  */);
   undo_strong_limit = 120000;
 
-  DEFVAR_LISP ("undo-outer-limit", &Vundo_outer_limit,
+  DEFVAR_LISP ("undo-outer-limit", Vundo_outer_limit,
 	      doc: /* Outer limit on size of undo information for one command.
 At garbage collection time, if the current command has produced
 more than this much undo information, it discards the info and displays
@@ -710,7 +696,7 @@ The text above describes the behavior of the function
 that variable usually specifies.  */);
   Vundo_outer_limit = make_number (12000000);
 
-  DEFVAR_LISP ("undo-outer-limit-function", &Vundo_outer_limit_function,
+  DEFVAR_LISP ("undo-outer-limit-function", Vundo_outer_limit_function,
 	       doc: /* Function to call when an undo list exceeds `undo-outer-limit'.
 This function is called with one argument, the current undo list size
 for the most recent command (since the last undo boundary).
@@ -721,10 +707,8 @@ Garbage collection is inhibited around the call to this function,
 so it must make sure not to do a lot of consing.  */);
   Vundo_outer_limit_function = Qnil;
 
-  DEFVAR_BOOL ("undo-inhibit-record-point", &undo_inhibit_record_point,
+  DEFVAR_BOOL ("undo-inhibit-record-point", undo_inhibit_record_point,
 	       doc: /* Non-nil means do not record `point' in `buffer-undo-list'.  */);
   undo_inhibit_record_point = 0;
 }
 
-/* arch-tag: d546ee01-4aed-4ffb-bb8b-eefaae50d38a
-   (do not change this comment) */

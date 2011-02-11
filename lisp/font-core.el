@@ -1,11 +1,10 @@
 ;;; font-core.el --- Core interface to font-lock
 
-;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-;;   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1992-2011  Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: languages, faces
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -80,17 +79,6 @@ functions, `font-lock-fontify-buffer-function',
 (put 'font-lock-defaults 'risky-local-variable t)
 (make-variable-buffer-local 'font-lock-defaults)
 
-(defvar font-lock-defaults-alist nil
-  "Alist of fall-back Font Lock defaults for major modes.
-
-Each item should be a list of the form:
-
- (MAJOR-MODE . FONT-LOCK-DEFAULTS)
-
-where MAJOR-MODE is a symbol and FONT-LOCK-DEFAULTS is a list of default
-settings.  See the variable `font-lock-defaults', which takes precedence.")
-(make-obsolete-variable 'font-lock-defaults-alist 'font-lock-defaults "21.1")
-
 (defvar font-lock-function 'font-lock-default-function
   "A function which is called when `font-lock-mode' is toggled.
 It will be passed one argument, which is the current value of
@@ -143,8 +131,7 @@ To fontify a block (the function or paragraph containing point, or a number of
 lines around point), perhaps because modification on the current line caused
 syntactic change on other lines, you can use \\[font-lock-fontify-block].
 
-See the variable `font-lock-defaults-alist' for the Font Lock mode default
-settings.  You can set your own default settings for some mode, by setting a
+You can set your own default settings for some mode, by setting a
 buffer local value for `font-lock-defaults', via its mode hook.
 
 The above is the default behavior of `font-lock-mode'; you may specify
@@ -206,8 +193,6 @@ this function onto `change-major-mode-hook'."
   ;; `font-lock-defaults'.
   (when (or font-lock-defaults
 	    (if (boundp 'font-lock-keywords) font-lock-keywords)
-	    (with-no-warnings
-	      (cdr (assq major-mode font-lock-defaults-alist)))
 	    (and mode
 		 (boundp 'font-lock-set-defaults)
 		 font-lock-set-defaults
@@ -309,5 +294,4 @@ means that Font Lock mode is turned on for buffers in C and C++ modes only."
 
 (provide 'font-core)
 
-;; arch-tag: f8c286e1-02f7-41d9-b89b-1b67780aed71
 ;;; font-core.el ends here

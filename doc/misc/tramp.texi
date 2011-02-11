@@ -16,7 +16,7 @@
 
 @include trampver.texi
 
-@c Macro for formatting a filename according to the repective syntax.
+@c Macro for formatting a filename according to the respective syntax.
 @c xxx and yyy are auxiliary macros in order to omit leading and
 @c trailing whitespace.  Not very elegant, but I don't know it better.
 
@@ -37,8 +37,7 @@
 @end macro
 
 @copying
-Copyright @copyright{} 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+Copyright @copyright{} 1999-2011 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -105,11 +104,6 @@ If you're using the other Emacs flavor, you should read the
 @end ifset
 
 @ifhtml
-@ifset jamanual
-This manual is also available as a @uref{@value{japanesemanual},
-Japanese translation}.
-@end ifset
-
 The latest release of @value{tramp} is available for
 @uref{ftp://ftp.gnu.org/gnu/tramp/, download}, or you may see
 @ref{Obtaining Tramp} for more details, including the CVS server
@@ -171,7 +165,6 @@ Installing @value{tramp} with your @value{emacsname}
 
 * Installation parameters::     Parameters in order to control installation.
 * Load paths::                  How to plug-in @value{tramp} into your environment.
-* Japanese manual::             Japanese manual.
 
 @end ifset
 
@@ -625,10 +618,6 @@ or 2 to connect to the remote host.  (You can also specify in
 @file{~/.ssh/config}, the SSH configuration file, which protocol
 should be used, and use the regular @option{ssh} method.)
 
-Two other variants, @option{ssh1_old} and @option{ssh2_old}, use the
-@command{ssh1} and @command{ssh2} commands explicitly.  If you don't
-know what these are, you do not need these options.
-
 All the methods based on @command{ssh} have an additional feature: you
 can specify a host name which looks like @file{host#42} (the real host
 name, then a hash sign, then a port number).  This means to connect to
@@ -706,6 +695,14 @@ This method is also similar to @option{ssh}.  It only uses the
 @command{krlogin -x} command to log in to the remote host.
 
 
+@item @option{ksu}
+@cindex method ksu
+@cindex ksu method
+@cindex Kerberos (with ksu method)
+
+This is another method from the Kerberos suite.  It behaves like @option{su}.
+
+
 @item @option{plink}
 @cindex method plink
 @cindex plink method
@@ -736,19 +733,6 @@ expects PuTTY session names, calling @samp{plink -load @var{session}
 -t"}.  User names are relevant only in case the corresponding session
 hasn't defined a user name.  Different port numbers must be defined in
 the session.
-
-
-@item @option{fish}
-@cindex method fish
-@cindex fish method
-
-This is an experimental implementation of the fish protocol, known from
-the GNU Midnight Commander or the KDE Konqueror.  @value{tramp} expects
-the fish server implementation from the KDE kioslave.  That means, the
-file @file{~/.fishsrv.pl} is expected to reside on the remote host.
-
-The implementation lacks good performance.  The code is offered anyway,
-maybe somebody can improve the performance.
 
 @end table
 
@@ -808,10 +792,6 @@ explicitly select whether you want to use the SSH protocol version 1
 or 2 to connect to the remote host.  (You can also specify in
 @file{~/.ssh/config}, the SSH configuration file, which protocol
 should be used, and use the regular @option{scp} method.)
-
-Two other variants, @option{scp1_old} and @option{scp2_old}, use the
-@command{ssh1} and @command{ssh2} commands explicitly.  If you don't
-know what these are, you do not need these options.
 
 All the @command{ssh} based methods support the @samp{-p} feature
 where you can specify a port number to connect to in the host name.
@@ -1969,7 +1949,7 @@ understand this syntax and will emit a syntax error when it reaches
 this line.
 
 Another example is the tilde (@code{~}) character, say when adding
-@file{~/bin} to @code{$PATH}.  Many Bourne shells will not expand this
+@file{~/bin} to @code{PATH}.  Many Bourne shells will not expand this
 character, and since there is usually no directory whose name consists
 of the single character tilde, strange things will happen.
 
@@ -1995,6 +1975,38 @@ csh derivative like tcsh, or it could be zsh, or even rc.  If the
 shell is Bourne-ish already, then it might be prudent to omit the
 @command{exec /bin/sh} step.  But how to find out if the shell is
 Bourne-ish?
+
+
+@item Interactive shell prompt
+
+@value{tramp} redefines the shell prompt in order to parse the shell's
+output robustly.  When calling an interactive shell by @kbd{M-x
+shell}, this doesn't look nice.
+
+You can redefine the shell prompt by checking the environment variable
+@code{INSIDE_EMACS}, which is set by @value{tramp}, in your startup
+script @file{~/.emacs_SHELLNAME}. @code{SHELLNAME} might be the string
+@code{bash} or similar, in case of doubt you could set it the
+environment variable @code{ESHELL} in your @file{.emacs}:
+
+@lisp
+(setenv "ESHELL" "bash")
+@end lisp
+
+Your file @file{~/.emacs_SHELLNAME} could contain code like
+
+@example
+# Reset the prompt for remote Tramp shells.
+if [ "$@{INSIDE_EMACS/*tramp*/tramp@}" == "tramp" ] ; then
+   PS1="[\u@@\h \w]$ "
+fi
+@end example
+
+@ifinfo
+@ifset emacs
+@xref{Interactive Shell, , , @value{emacsdir}}.
+@end ifset
+@end ifinfo
 
 @end table
 
@@ -2478,6 +2490,15 @@ remote file names.  It does not work for the @option{ftp} and
 @option{smb} methods.  Association of a pty, as specified in
 @code{start-file-process}, is not supported.
 
+@code{process-file} and @code{start-file-process} work on the remote
+host, when the variable @code{default-directory} is remote:
+
+@lisp
+(let ((default-directory "/ssh:remote.host:"))
+  (start-file-process "grep" (get-buffer-create "*grep*")
+                      "/bin/sh" "-c" "grep -e tramp *"))
+@end lisp
+
 @ifset emacsgvfs
 If the remote host is mounted via GVFS (see @ref{GVFS based methods}),
 the remote filesystem is mounted locally.  Therefore, there are no
@@ -2520,7 +2541,7 @@ Adding an entry can be performed via @code{add-to-list}:
 Changing or removing an existing entry is not encouraged.  The default
 values are chosen for proper @value{tramp} work.  Nevertheless, if for
 example a paranoid system administrator disallows changing the
-@var{$HISTORY} environment variable, you can customize
+@code{HISTORY} environment variable, you can customize
 @code{tramp-remote-process-environment}, or you can apply the
 following code in your @file{.emacs}:
 
@@ -2539,7 +2560,7 @@ integrate them as well.  @xref{Bug Reports}.
 
 If you want to run a remote program, which shall connect the X11
 server you are using with your local host, you can set the
-@var{$DISPLAY} environment variable on the remote host:
+@code{DISPLAY} environment variable on the remote host:
 
 @lisp
 (add-to-list 'tramp-remote-process-environment
@@ -2780,7 +2801,10 @@ Use an external method, like @option{scpc}.
 Use caching.  This is already enabled by default.  Information about
 the remote host as well as the remote files are cached for reuse.  The
 information about remote hosts is kept in the file specified in
-@code{tramp-persistency-file-name}.  Keep this file.
+@code{tramp-persistency-file-name}.  Keep this file.  If you are
+confident, that files on remote hosts are not changed out of
+@value{emacsname}' control, set @code{remote-file-name-inhibit-cache}
+to @code{nil}.
 
 Disable version control.  If you access remote files which are not
 under version control, a lot of check operations can be avoided by
@@ -3657,7 +3681,3 @@ for @value{emacsothername}.
 @c * Use `filename' resp. `file name' consistently.
 @c * Use `host' resp. `machine' consistently.
 @c * Consistent small or capitalized words especially in menues.
-
-@ignore
-   arch-tag: f96dd66e-6dd3-4c92-8d77-9c56205ba808
-@end ignore

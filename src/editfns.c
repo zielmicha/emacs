@@ -1,8 +1,6 @@
 /* Lisp functions pertaining to editing.
 
-Copyright (C) 1985, 1986, 1987, 1989, 1993, 1994, 1995, 1996, 1997,
-  1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-  2009, 2010 Free Software Foundation, Inc.
+Copyright (C) 1985-1987, 1989, 1993-2011 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -29,9 +27,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <pwd.h>
 #endif
 
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 
 #ifdef HAVE_SYS_UTSNAME_H
 #include <sys/utsname.h>
@@ -49,6 +45,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #endif
 
 #include <ctype.h>
+#include <strftime.h>
 
 #include "intervals.h"
 #include "buffer.h"
@@ -86,19 +83,17 @@ extern char **environ;
     (1000 - TM_YEAR_BASE <= (tm_year) && (tm_year) <= 9999 - TM_YEAR_BASE)
 #endif
 
-extern size_t emacs_strftimeu (char *, size_t, const char *,
-                               const struct tm *, int);
-
 #ifdef WINDOWSNT
 extern Lisp_Object w32_get_internal_run_time (void);
 #endif
 
 static int tm_diff (struct tm *, struct tm *);
-static void find_field (Lisp_Object, Lisp_Object, Lisp_Object, int *, Lisp_Object, int *);
-static void update_buffer_properties (int, int);
+static void find_field (Lisp_Object, Lisp_Object, Lisp_Object,
+			EMACS_INT *, Lisp_Object, EMACS_INT *);
+static void update_buffer_properties (EMACS_INT, EMACS_INT);
 static Lisp_Object region_limit (int);
-static size_t emacs_memftimeu (char *, size_t, const char *,
-                               size_t, const struct tm *, int);
+static size_t emacs_nmemftime (char *, size_t, const char *,
+			       size_t, const struct tm *, int, int);
 static void general_insert_function (void (*) (const unsigned char *, EMACS_INT),
 				     void (*) (Lisp_Object, EMACS_INT,
 					       EMACS_INT, EMACS_INT,
@@ -106,25 +101,11 @@ static void general_insert_function (void (*) (const unsigned char *, EMACS_INT)
 				     int, int, Lisp_Object *);
 static Lisp_Object subst_char_in_region_unwind (Lisp_Object);
 static Lisp_Object subst_char_in_region_unwind_1 (Lisp_Object);
-static void transpose_markers (int, int, int, int, int, int, int, int);
+static void transpose_markers (EMACS_INT, EMACS_INT, EMACS_INT, EMACS_INT,
+			       EMACS_INT, EMACS_INT, EMACS_INT, EMACS_INT);
 
-Lisp_Object Vbuffer_access_fontify_functions;
 Lisp_Object Qbuffer_access_fontify_functions;
-Lisp_Object Vbuffer_access_fontified_property;
-
 Lisp_Object Fuser_full_name (Lisp_Object);
-
-/* Non-nil means don't stop at field boundary in text motion commands.  */
-
-Lisp_Object Vinhibit_field_text_motion;
-
-/* Some static data, and a function to initialize it for each run */
-
-Lisp_Object Vsystem_name;
-Lisp_Object Vuser_real_login_name;	/* login name of current user ID */
-Lisp_Object Vuser_full_name;		/* full name of current user */
-Lisp_Object Vuser_login_name;		/* user name from LOGNAME or USER */
-Lisp_Object Voperating_system_release;  /* Operating System Release */
 
 /* Symbol for the text property used to mark fields.  */
 
@@ -216,11 +197,13 @@ usage: (char-to-string CHAR)  */)
 }
 
 DEFUN ("byte-to-string", Fbyte_to_string, Sbyte_to_string, 1, 1, 0,
-       doc: /* Convert arg BYTE to a string containing that byte.  */)
+       doc: /* Convert arg BYTE to a unibyte string containing that byte.  */)
   (Lisp_Object byte)
 {
   unsigned char b;
   CHECK_NUMBER (byte);
+  if (XINT (byte) < 0 || XINT (byte) > 255)
+    error ("Invalid byte");
   b = XINT (byte);
   return make_string_from_bytes (&b, 1, 1);
 }
@@ -245,7 +228,7 @@ A multibyte character is handled correctly.  */)
 }
 
 static Lisp_Object
-buildmark (int charpos, int bytepos)
+buildmark (EMACS_INT charpos, EMACS_INT bytepos)
 {
   register Lisp_Object mark;
   mark = Fmake_marker ();
@@ -270,8 +253,8 @@ DEFUN ("point-marker", Fpoint_marker, Spoint_marker, 0, 0, 0,
   return buildmark (PT, PT_BYTE);
 }
 
-int
-clip_to_bounds (int lower, int num, int upper)
+EMACS_INT
+clip_to_bounds (EMACS_INT lower, EMACS_INT num, EMACS_INT upper)
 {
   if (num < lower)
     return lower;
@@ -288,7 +271,7 @@ Beginning of buffer is position (point-min), end is (point-max).
 The return value is POSITION.  */)
   (register Lisp_Object position)
 {
-  int pos;
+  EMACS_INT pos;
 
   if (MARKERP (position)
       && current_buffer == XMARKER (position)->buffer)
@@ -364,11 +347,11 @@ If you set the marker not to point anywhere, the buffer will have no mark.  */)
    of length LEN.  */
 
 static int
-overlays_around (int pos, Lisp_Object *vec, int len)
+overlays_around (EMACS_INT pos, Lisp_Object *vec, int len)
 {
   Lisp_Object overlay, start, end;
   struct Lisp_Overlay *tail;
-  int startpos, endpos;
+  EMACS_INT startpos, endpos;
   int idx = 0;
 
   for (tail = current_buffer->overlays_before; tail; tail = tail->next)
@@ -436,7 +419,7 @@ get_pos_property (Lisp_Object position, register Lisp_Object prop, Lisp_Object o
     return Fget_text_property (position, prop, object);
   else
     {
-      int posn = XINT (position);
+      EMACS_INT posn = XINT (position);
       int noverlays;
       Lisp_Object *overlay_vec, tem;
       struct buffer *obuf = current_buffer;
@@ -515,7 +498,9 @@ get_pos_property (Lisp_Object position, register Lisp_Object prop, Lisp_Object o
    is not stored.  */
 
 static void
-find_field (Lisp_Object pos, Lisp_Object merge_at_boundary, Lisp_Object beg_limit, int *beg, Lisp_Object end_limit, int *end)
+find_field (Lisp_Object pos, Lisp_Object merge_at_boundary,
+	    Lisp_Object beg_limit,
+	    EMACS_INT *beg, Lisp_Object end_limit, EMACS_INT *end)
 {
   /* Fields right before and after the point.  */
   Lisp_Object before_field, after_field;
@@ -631,7 +616,7 @@ A field is a region of text with the same `field' property.
 If POS is nil, the value of point is used for POS.  */)
   (Lisp_Object pos)
 {
-  int beg, end;
+  EMACS_INT beg, end;
   find_field (pos, Qnil, Qnil, &beg, Qnil, &end);
   if (beg != end)
     del_range (beg, end);
@@ -644,7 +629,7 @@ A field is a region of text with the same `field' property.
 If POS is nil, the value of point is used for POS.  */)
   (Lisp_Object pos)
 {
-  int beg, end;
+  EMACS_INT beg, end;
   find_field (pos, Qnil, Qnil, &beg, Qnil, &end);
   return make_buffer_string (beg, end, 1);
 }
@@ -655,7 +640,7 @@ A field is a region of text with the same `field' property.
 If POS is nil, the value of point is used for POS.  */)
   (Lisp_Object pos)
 {
-  int beg, end;
+  EMACS_INT beg, end;
   find_field (pos, Qnil, Qnil, &beg, Qnil, &end);
   return make_buffer_string (beg, end, 0);
 }
@@ -670,7 +655,7 @@ If LIMIT is non-nil, it is a buffer position; if the beginning of the field
 is before LIMIT, then LIMIT will be returned instead.  */)
   (Lisp_Object pos, Lisp_Object escape_from_edge, Lisp_Object limit)
 {
-  int beg;
+  EMACS_INT beg;
   find_field (pos, escape_from_edge, limit, &beg, Qnil, 0);
   return make_number (beg);
 }
@@ -685,7 +670,7 @@ If LIMIT is non-nil, it is a buffer position; if the end of the field
 is after LIMIT, then LIMIT will be returned instead.  */)
   (Lisp_Object pos, Lisp_Object escape_from_edge, Lisp_Object limit)
 {
-  int end;
+  EMACS_INT end;
   find_field (pos, escape_from_edge, Qnil, 0, limit, &end);
   return make_number (end);
 }
@@ -720,7 +705,7 @@ Field boundaries are not noticed if `inhibit-field-text-motion' is non-nil.  */)
   (Lisp_Object new_pos, Lisp_Object old_pos, Lisp_Object escape_from_edge, Lisp_Object only_in_line, Lisp_Object inhibit_capture_property)
 {
   /* If non-zero, then the original point, before re-positioning.  */
-  int orig_point = 0;
+  EMACS_INT orig_point = 0;
   int fwd;
   Lisp_Object prev_old, prev_new;
 
@@ -817,7 +802,7 @@ boundaries bind `inhibit-field-text-motion' to t.
 This function does not move point.  */)
   (Lisp_Object n)
 {
-  int orig, orig_byte, end;
+  EMACS_INT orig, orig_byte, end;
   int count = SPECPDL_INDEX ();
   specbind (Qinhibit_point_motion_hooks, Qt);
 
@@ -858,8 +843,8 @@ boundaries bind `inhibit-field-text-motion' to t.
 This function does not move point.  */)
   (Lisp_Object n)
 {
-  int end_pos;
-  int orig = PT;
+  EMACS_INT end_pos;
+  EMACS_INT orig = PT;
 
   if (NILP (n))
     XSETFASTINT (n, 1);
@@ -1131,7 +1116,7 @@ At the beginning of the buffer or accessible region, return 0.  */)
     XSETFASTINT (temp, 0);
   else if (!NILP (current_buffer->enable_multibyte_characters))
     {
-      int pos = PT_BYTE;
+      EMACS_INT pos = PT_BYTE;
       DEC_POS (pos);
       XSETFASTINT (temp, FETCH_CHAR (pos));
     }
@@ -1185,7 +1170,7 @@ POS is an integer or a marker and defaults to point.
 If POS is out of range, the value is nil.  */)
   (Lisp_Object pos)
 {
-  register int pos_byte;
+  register EMACS_INT pos_byte;
 
   if (NILP (pos))
     {
@@ -1218,7 +1203,7 @@ If POS is out of range, the value is nil.  */)
   (Lisp_Object pos)
 {
   register Lisp_Object val;
-  register int pos_byte;
+  register EMACS_INT pos_byte;
 
   if (NILP (pos))
     {
@@ -1358,7 +1343,7 @@ name, or nil if there is no such user.  */)
   else if (STRINGP (uid))
     {
       BLOCK_INPUT;
-      pw = (struct passwd *) getpwnam (SDATA (uid));
+      pw = (struct passwd *) getpwnam (SSDATA (uid));
       UNBLOCK_INPUT;
     }
   else
@@ -1385,7 +1370,7 @@ name, or nil if there is no such user.  */)
       r = (unsigned char *) alloca (strlen (p) + SCHARS (login) + 1);
       memcpy (r, p, q - p);
       r[q - p] = 0;
-      strcat (r, SDATA (login));
+      strcat (r, SSDATA (login));
       r[q - p] = UPCASE (r[q - p]);
       strcat (r, q + 1);
       full = build_string (r);
@@ -1408,7 +1393,7 @@ const char *
 get_system_name (void)
 {
   if (STRINGP (Vsystem_name))
-    return (const char *) SDATA (Vsystem_name);
+    return SSDATA (Vsystem_name);
   else
     return "";
 }
@@ -1417,7 +1402,7 @@ const char *
 get_operating_system_release (void)
 {
   if (STRINGP (Voperating_system_release))
-    return (char *) SDATA (Voperating_system_release);
+    return SSDATA (Voperating_system_release);
   else
     return "";
 }
@@ -1564,22 +1549,24 @@ or (if you need time as a string) `format-time-string'.  */)
 /* Write information into buffer S of size MAXSIZE, according to the
    FORMAT of length FORMAT_LEN, using time information taken from *TP.
    Default to Universal Time if UT is nonzero, local time otherwise.
+   Use NS as the number of nanoseconds in the %N directive.
    Return the number of bytes written, not including the terminating
    '\0'.  If S is NULL, nothing will be written anywhere; so to
    determine how many bytes would be written, use NULL for S and
    ((size_t) -1) for MAXSIZE.
 
-   This function behaves like emacs_strftimeu, except it allows null
-   bytes in FORMAT.  */
+   This function behaves like nstrftime, except it allows null
+   bytes in FORMAT and it does not support nanoseconds.  */
 static size_t
-emacs_memftimeu (char *s, size_t maxsize, const char *format, size_t format_len, const struct tm *tp, int ut)
+emacs_nmemftime (char *s, size_t maxsize, const char *format,
+		 size_t format_len, const struct tm *tp, int ut, int ns)
 {
   size_t total = 0;
 
   /* Loop through all the null-terminated strings in the format
      argument.  Normally there's just one null-terminated string, but
      there can be arbitrarily many, concatenated together, if the
-     format contains '\0' bytes.  emacs_strftimeu stops at the first
+     format contains '\0' bytes.  nstrftime stops at the first
      '\0' byte so we must invoke it separately for each such string.  */
   for (;;)
     {
@@ -1589,7 +1576,7 @@ emacs_memftimeu (char *s, size_t maxsize, const char *format, size_t format_len,
       if (s)
 	s[0] = '\1';
 
-      result = emacs_strftimeu (s, maxsize, format, tp, ut);
+      result = nstrftime (s, maxsize, format, tp, ut, ns);
 
       if (s)
 	{
@@ -1635,6 +1622,7 @@ by text that describes the specified date and time in TIME:
 %p is the locale's equivalent of either AM or PM.
 %M is the minute.
 %S is the second.
+%N is the nanosecond, %6N the microsecond, %3N the millisecond, etc.
 %Z is the time zone name, %z is the numeric form.
 %s is the number of seconds since 1970-01-01 00:00:00 +0000.
 
@@ -1664,13 +1652,17 @@ For example, to produce full ISO 8601 format, use "%Y-%m-%dT%T%z".  */)
 {
   time_t value;
   int size;
+  int usec;
+  int ns;
   struct tm *tm;
   int ut = ! NILP (universal);
 
   CHECK_STRING (format_string);
 
-  if (! lisp_time_argument (time, &value, NULL))
+  if (! (lisp_time_argument (time, &value, &usec)
+	 && 0 <= usec && usec < 1000000))
     error ("Invalid time specification");
+  ns = usec * 1000;
 
   format_string = code_convert_string_norecord (format_string,
 						Vlocale_coding_system, 1);
@@ -1693,9 +1685,9 @@ For example, to produce full ISO 8601 format, use "%Y-%m-%dT%T%z".  */)
 
       buf[0] = '\1';
       BLOCK_INPUT;
-      result = emacs_memftimeu (buf, size, SDATA (format_string),
+      result = emacs_nmemftime (buf, size, SSDATA (format_string),
 				SBYTES (format_string),
-				tm, ut);
+				tm, ut, ns);
       UNBLOCK_INPUT;
       if ((result > 0 && result < size) || (result == 0 && buf[0] == '\0'))
 	return code_convert_string_norecord (make_unibyte_string (buf, result),
@@ -1703,10 +1695,10 @@ For example, to produce full ISO 8601 format, use "%Y-%m-%dT%T%z".  */)
 
       /* If buffer was too small, make it bigger and try again.  */
       BLOCK_INPUT;
-      result = emacs_memftimeu (NULL, (size_t) -1,
-				SDATA (format_string),
+      result = emacs_nmemftime (NULL, (size_t) -1,
+				SSDATA (format_string),
 				SBYTES (format_string),
-				tm, ut);
+				tm, ut, ns);
       UNBLOCK_INPUT;
       size = result + 1;
     }
@@ -1825,7 +1817,7 @@ usage: (encode-time SECOND MINUTE HOUR DAY MONTH YEAR &optional ZONE)  */)
       if (EQ (zone, Qt))
 	tzstring = "UTC0";
       else if (STRINGP (zone))
-	tzstring = (char *) SDATA (zone);
+	tzstring = SSDATA (zone);
       else if (INTEGERP (zone))
 	{
 	  int abszone = eabs (XINT (zone));
@@ -2014,7 +2006,7 @@ If TZ is t, use Universal Time.  */)
   else
     {
       CHECK_STRING (tz);
-      tzstring = (char *) SDATA (tz);
+      tzstring = SSDATA (tz);
     }
 
   set_time_zone_rule (tzstring);
@@ -2266,8 +2258,9 @@ from adjoining text, if those properties are sticky.  */)
   (Lisp_Object character, Lisp_Object count, Lisp_Object inherit)
 {
   register unsigned char *string;
-  register int strlen;
-  register int i, n;
+  register EMACS_INT strlen;
+  register int i;
+  register EMACS_INT n;
   int len;
   unsigned char str[MAX_MULTIBYTE_LENGTH];
 
@@ -2278,6 +2271,8 @@ from adjoining text, if those properties are sticky.  */)
     len = CHAR_STRING (XFASTINT (character), str);
   else
     str[0] = XFASTINT (character), len = 1;
+  if (MOST_POSITIVE_FIXNUM / len < XINT (count))
+    error ("Maximum buffer size would be exceeded");
   n = XINT (count) * len;
   if (n <= 0)
     return Qnil;
@@ -2343,10 +2338,10 @@ from adjoining text, if those properties are sticky.  */)
    buffer substrings.  */
 
 Lisp_Object
-make_buffer_string (int start, int end, int props)
+make_buffer_string (EMACS_INT start, EMACS_INT end, int props)
 {
-  int start_byte = CHAR_TO_BYTE (start);
-  int end_byte = CHAR_TO_BYTE (end);
+  EMACS_INT start_byte = CHAR_TO_BYTE (start);
+  EMACS_INT end_byte = CHAR_TO_BYTE (end);
 
   return make_buffer_string_both (start, start_byte, end, end_byte, props);
 }
@@ -2367,7 +2362,8 @@ make_buffer_string (int start, int end, int props)
    buffer substrings.  */
 
 Lisp_Object
-make_buffer_string_both (int start, int start_byte, int end, int end_byte, int props)
+make_buffer_string_both (EMACS_INT start, EMACS_INT start_byte,
+			 EMACS_INT end, EMACS_INT end_byte, int props)
 {
   Lisp_Object result, tem, tem1;
 
@@ -2400,7 +2396,7 @@ make_buffer_string_both (int start, int start_byte, int end, int end_byte, int p
    in the current buffer, if necessary.  */
 
 static void
-update_buffer_properties (int start, int end)
+update_buffer_properties (EMACS_INT start, EMACS_INT end)
 {
   /* If this buffer has some access functions,
      call them, specifying the range of the buffer being accessed.  */
@@ -2439,7 +2435,7 @@ into the result string; if you don't want the text properties,
 use `buffer-substring-no-properties' instead.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  register int b, e;
+  register EMACS_INT b, e;
 
   validate_region (&start, &end);
   b = XINT (start);
@@ -2455,7 +2451,7 @@ The two arguments START and END are character positions;
 they can be in either order.  */)
   (Lisp_Object start, Lisp_Object end)
 {
-  register int b, e;
+  register EMACS_INT b, e;
 
   validate_region (&start, &end);
   b = XINT (start);
@@ -2481,7 +2477,7 @@ Arguments START and END are character positions specifying the substring.
 They default to the values of (point-min) and (point-max) in BUFFER.  */)
   (Lisp_Object buffer, Lisp_Object start, Lisp_Object end)
 {
-  register int b, e, temp;
+  register EMACS_INT b, e, temp;
   register struct buffer *bp, *obuf;
   Lisp_Object buf;
 
@@ -2534,13 +2530,13 @@ The value of `case-fold-search' in the current buffer
 determines whether case is significant or ignored.  */)
   (Lisp_Object buffer1, Lisp_Object start1, Lisp_Object end1, Lisp_Object buffer2, Lisp_Object start2, Lisp_Object end2)
 {
-  register int begp1, endp1, begp2, endp2, temp;
+  register EMACS_INT begp1, endp1, begp2, endp2, temp;
   register struct buffer *bp1, *bp2;
   register Lisp_Object trt
     = (!NILP (current_buffer->case_fold_search)
        ? current_buffer->case_canon_table : Qnil);
-  int chars = 0;
-  int i1, i2, i1_byte, i2_byte;
+  EMACS_INT chars = 0;
+  EMACS_INT i1, i2, i1_byte, i2_byte;
 
   /* Find the first buffer and its substring.  */
 
@@ -2701,12 +2697,12 @@ and don't mark the buffer as really changed.
 Both characters must have the same length of multi-byte form.  */)
   (Lisp_Object start, Lisp_Object end, Lisp_Object fromchar, Lisp_Object tochar, Lisp_Object noundo)
 {
-  register int pos, pos_byte, stop, i, len, end_byte;
+  register EMACS_INT pos, pos_byte, stop, i, len, end_byte;
   /* Keep track of the first change in the buffer:
      if 0 we haven't found it yet.
      if < 0 we've found it and we've run the before-change-function.
      if > 0 we've actually performed it and the value is its position.  */
-  int changed = 0;
+  EMACS_INT changed = 0;
   unsigned char fromstr[MAX_MULTIBYTE_LENGTH], tostr[MAX_MULTIBYTE_LENGTH];
   unsigned char *p;
   int count = SPECPDL_INDEX ();
@@ -2715,7 +2711,7 @@ Both characters must have the same length of multi-byte form.  */)
 #define COMBINING_AFTER  2
 #define COMBINING_BOTH (COMBINING_BEFORE | COMBINING_AFTER)
   int maybe_byte_combining = COMBINING_NO;
-  int last_changed = 0;
+  EMACS_INT last_changed = 0;
   int multibyte_p = !NILP (current_buffer->enable_multibyte_characters);
 
  restart:
@@ -2772,7 +2768,7 @@ Both characters must have the same length of multi-byte form.  */)
     stop = min (stop, GPT_BYTE);
   while (1)
     {
-      int pos_byte_next = pos_byte;
+      EMACS_INT pos_byte_next = pos_byte;
 
       if (pos_byte >= stop)
 	{
@@ -2875,7 +2871,8 @@ Both characters must have the same length of multi-byte form.  */)
 }
 
 
-static Lisp_Object check_translation (int, int, int, Lisp_Object);
+static Lisp_Object check_translation (EMACS_INT, EMACS_INT, EMACS_INT,
+				      Lisp_Object);
 
 /* Helper function for Ftranslate_region_internal.
 
@@ -2884,7 +2881,8 @@ static Lisp_Object check_translation (int, int, int, Lisp_Object);
    element is found, return it.  Otherwise return Qnil.  */
 
 static Lisp_Object
-check_translation (int pos, int pos_byte, int end, Lisp_Object val)
+check_translation (EMACS_INT pos, EMACS_INT pos_byte, EMACS_INT end,
+		   Lisp_Object val)
 {
   int buf_size = 16, buf_used = 0;
   int *buf = alloca (sizeof (int) * buf_size);
@@ -2892,7 +2890,7 @@ check_translation (int pos, int pos_byte, int end, Lisp_Object val)
   for (; CONSP (val); val = XCDR (val))
     {
       Lisp_Object elt;
-      int len, i;
+      EMACS_INT len, i;
 
       elt = XCAR (val);
       if (! CONSP (elt))
@@ -2908,7 +2906,7 @@ check_translation (int pos, int pos_byte, int end, Lisp_Object val)
 	      if (buf_used <= i)
 		{
 		  unsigned char *p = BYTE_POS_ADDR (pos_byte);
-		  int len;
+		  int len1;
 
 		  if (buf_used == buf_size)
 		    {
@@ -2919,8 +2917,8 @@ check_translation (int pos, int pos_byte, int end, Lisp_Object val)
 		      memcpy (newbuf, buf, sizeof (int) * buf_used);
 		      buf = newbuf;
 		    }
-		  buf[buf_used++] = STRING_CHAR_AND_LENGTH (p, len);
-		  pos_byte += len;
+		  buf[buf_used++] = STRING_CHAR_AND_LENGTH (p, len1);
+		  pos_byte += len1;
 		}
 	      if (XINT (AREF (elt, i)) != buf[i])
 		break;
@@ -2945,8 +2943,8 @@ It returns the number of characters changed.  */)
   register unsigned char *tt;	/* Trans table. */
   register int nc;		/* New character. */
   int cnt;			/* Number of changes made. */
-  int size;			/* Size of translate table. */
-  int pos, pos_byte, end_pos;
+  EMACS_INT size;		/* Size of translate table. */
+  EMACS_INT pos, pos_byte, end_pos;
   int multibyte = !NILP (current_buffer->enable_multibyte_characters);
   int string_multibyte;
   Lisp_Object val;
@@ -3016,7 +3014,7 @@ It returns the number of characters changed.  */)
 	    }
 	  else
 	    {
-	      int c;
+	      EMACS_INT c;
 
 	      nc = oc;
 	      val = CHAR_TABLE_REF (table, oc);
@@ -3229,7 +3227,7 @@ save_restriction_restore (Lisp_Object data)
 	/* The restriction has changed from the saved one, so restore
 	   the saved restriction.  */
 	{
-	  int pt = BUF_PT (buf);
+	  EMACS_INT pt = BUF_PT (buf);
 
 	  SET_BUF_BEGV_BOTH (buf, beg->charpos, beg->bytepos);
 	  SET_BUF_ZV_BOTH (buf, end->charpos, end->bytepos);
@@ -3508,7 +3506,7 @@ usage: (format STRING &rest OBJECTS)  */)
   (int nargs, register Lisp_Object *args)
 {
   register int n;		/* The number of the next arg to substitute */
-  register int total;		/* An estimate of the final length */
+  register EMACS_INT total;	/* An estimate of the final length */
   char *buf, *p;
   register unsigned char *format, *end, *format_start;
   int nchars;
@@ -3517,7 +3515,7 @@ usage: (format STRING &rest OBJECTS)  */)
   int multibyte = 0;
   /* When we make a multibyte string, we must pay attention to the
      byte combining problem, i.e., a byte may be combined with a
-     multibyte charcter of the previous string.  This flag tells if we
+     multibyte character of the previous string.  This flag tells if we
      must consider such a situation or not.  */
   int maybe_combine_byte;
   unsigned char *this_format;
@@ -3602,8 +3600,8 @@ usage: (format STRING &rest OBJECTS)  */)
   while (format != end)
     if (*format++ == '%')
       {
-	int thissize = 0;
-	int actual_width = 0;
+	EMACS_INT thissize = 0;
+	EMACS_INT actual_width = 0;
 	unsigned char *this_format_start = format - 1;
 	int field_width = 0;
 
@@ -3845,8 +3843,8 @@ usage: (format STRING &rest OBJECTS)  */)
 	      /* handle case (precision[n] >= 0) */
 
 	      int width, padding;
-	      int nbytes, start, end;
-	      int nchars_string;
+	      EMACS_INT nbytes, start, end;
+	      EMACS_INT nchars_string;
 
 	      /* lisp_string_width ignores a precision of 0, but GNU
 		 libc functions print 0 characters when the precision
@@ -3857,7 +3855,8 @@ usage: (format STRING &rest OBJECTS)  */)
 	      if (precision[n] == 0)
 		width = nchars_string = nbytes = 0;
 	      else if (precision[n] > 0)
-		width = lisp_string_width (args[n], precision[n], &nchars_string, &nbytes);
+		width = lisp_string_width (args[n], precision[n],
+					   &nchars_string, &nbytes);
 	      else
 		{		/* no precision spec given for this argument */
 		  width = lisp_string_width (args[n], -1, NULL, NULL);
@@ -4016,7 +4015,8 @@ usage: (format STRING &rest OBJECTS)  */)
 
       if (CONSP (props))
 	{
-	  int bytepos = 0, position = 0, translated = 0, argn = 1;
+	  EMACS_INT bytepos = 0, position = 0, translated = 0;
+	  int argn = 1;
 	  Lisp_Object list;
 
 	  /* Adjust the bounds of each text property
@@ -4034,7 +4034,7 @@ usage: (format STRING &rest OBJECTS)  */)
 	  for (list = props; CONSP (list); list = XCDR (list))
 	    {
 	      Lisp_Object item;
-	      int pos;
+	      EMACS_INT pos;
 
 	      item = XCAR (list);
 
@@ -4170,11 +4170,12 @@ Case is ignored if `case-fold-search' is non-nil in the current buffer.  */)
    It's the caller's job to ensure that START1 <= END1 <= START2 <= END2.  */
 
 static void
-transpose_markers (int start1, int end1, int start2, int end2,
-		   int start1_byte, int end1_byte,
-		   int start2_byte, int end2_byte)
+transpose_markers (EMACS_INT start1, EMACS_INT end1,
+		   EMACS_INT start2, EMACS_INT end2,
+		   EMACS_INT start1_byte, EMACS_INT end1_byte,
+		   EMACS_INT start2_byte, EMACS_INT end2_byte)
 {
-  register int amt1, amt1_byte, amt2, amt2_byte, diff, diff_byte, mpos;
+  register EMACS_INT amt1, amt1_byte, amt2, amt2_byte, diff, diff_byte, mpos;
   register struct Lisp_Marker *marker;
 
   /* Update point as if it were a marker.  */
@@ -4271,7 +4272,7 @@ Transposing beyond buffer boundaries is an error.  */)
   /* Swap the regions if they're reversed.  */
   if (start2 < end1)
     {
-      register int glumph = start1;
+      register EMACS_INT glumph = start1;
       start1 = start2;
       start2 = glumph;
       glumph = end1;
@@ -4542,12 +4543,12 @@ syms_of_editfns (void)
     = intern_c_string ("buffer-access-fontify-functions");
   staticpro (&Qbuffer_access_fontify_functions);
 
-  DEFVAR_LISP ("inhibit-field-text-motion", &Vinhibit_field_text_motion,
+  DEFVAR_LISP ("inhibit-field-text-motion", Vinhibit_field_text_motion,
 	       doc: /* Non-nil means text motion commands don't notice fields.  */);
   Vinhibit_field_text_motion = Qnil;
 
   DEFVAR_LISP ("buffer-access-fontify-functions",
-	       &Vbuffer_access_fontify_functions,
+	       Vbuffer_access_fontify_functions,
 	       doc: /* List of functions called by `buffer-substring' to fontify if necessary.
 Each function is called with two arguments which specify the range
 of the buffer being accessed.  */);
@@ -4565,25 +4566,25 @@ of the buffer being accessed.  */);
   }
 
   DEFVAR_LISP ("buffer-access-fontified-property",
-	       &Vbuffer_access_fontified_property,
+	       Vbuffer_access_fontified_property,
 	       doc: /* Property which (if non-nil) indicates text has been fontified.
 `buffer-substring' need not call the `buffer-access-fontify-functions'
 functions if all the text being accessed has this property.  */);
   Vbuffer_access_fontified_property = Qnil;
 
-  DEFVAR_LISP ("system-name", &Vsystem_name,
+  DEFVAR_LISP ("system-name", Vsystem_name,
 	       doc: /* The host name of the machine Emacs is running on.  */);
 
-  DEFVAR_LISP ("user-full-name", &Vuser_full_name,
+  DEFVAR_LISP ("user-full-name", Vuser_full_name,
 	       doc: /* The full name of the user logged in.  */);
 
-  DEFVAR_LISP ("user-login-name", &Vuser_login_name,
+  DEFVAR_LISP ("user-login-name", Vuser_login_name,
 	       doc: /* The user's name, taken from environment variables if possible.  */);
 
-  DEFVAR_LISP ("user-real-login-name", &Vuser_real_login_name,
+  DEFVAR_LISP ("user-real-login-name", Vuser_real_login_name,
 	       doc: /* The user's name, based upon the real uid only.  */);
 
-  DEFVAR_LISP ("operating-system-release", &Voperating_system_release,
+  DEFVAR_LISP ("operating-system-release", Voperating_system_release,
 	       doc: /* The release of the operating system Emacs is running on.  */);
 
   defsubr (&Spropertize);
@@ -4679,6 +4680,3 @@ functions if all the text being accessed has this property.  */);
   defsubr (&Ssave_restriction);
   defsubr (&Stranspose_regions);
 }
-
-/* arch-tag: fc3827d8-6f60-4067-b11e-c3218031b018
-   (do not change this comment) */

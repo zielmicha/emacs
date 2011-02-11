@@ -1,7 +1,6 @@
 /* Simple built-in editing commands.
-   Copyright (C) 1985, 1993, 1994, 1995, 1996, 1997, 1998, 2001, 2002,
-                 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-                 Free Software Foundation, Inc.
+
+Copyright (C) 1985, 1993-1998, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -32,12 +31,12 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "dispextern.h"
 #include "frame.h"
 
-Lisp_Object Qkill_forward_chars, Qkill_backward_chars, Vblink_paren_function;
+Lisp_Object Qkill_forward_chars, Qkill_backward_chars;
 
 /* A possible value for a buffer's overwrite-mode variable.  */
 Lisp_Object Qoverwrite_mode_binary;
 
-static int internal_self_insert (int, int);
+static int internal_self_insert (int, EMACS_INT);
 
 DEFUN ("forward-point", Fforward_point, Sforward_point, 1, 1, 0,
        doc: /* Return buffer position N characters after (before if N negative) point.  */)
@@ -68,7 +67,7 @@ right or to the left on the screen.  This is in contrast with
      hooks, etcetera), that's not a good approach.  So we validate the
      proposed position, then set point.  */
   {
-    int new_point = PT + XINT (n);
+    EMACS_INT new_point = PT + XINT (n);
 
     if (new_point < BEGV)
       {
@@ -116,9 +115,9 @@ With positive N, a non-empty line at the end counts as one line
 successfully moved (for the return value).  */)
   (Lisp_Object n)
 {
-  int opoint = PT, opoint_byte = PT_BYTE;
-  int pos, pos_byte;
-  int count, shortage;
+  EMACS_INT opoint = PT, opoint_byte = PT_BYTE;
+  EMACS_INT pos, pos_byte;
+  EMACS_INT count, shortage;
 
   if (NILP (n))
     count = 1;
@@ -188,7 +187,7 @@ not move.  To ignore field boundaries bind `inhibit-field-text-motion'
 to t.  */)
   (Lisp_Object n)
 {
-  int newpos;
+  EMACS_INT newpos;
 
   if (NILP (n))
     XSETFASTINT (n, 1);
@@ -230,10 +229,10 @@ Optional second arg KILLFLAG non-nil means kill instead (save in kill ring).
 Interactively, N is the prefix arg, and KILLFLAG is set if
 N was explicitly specified.
 
-The command `delete-forward' is preferable for interactive use.  */)
+The command `delete-forward-char' is preferable for interactive use.  */)
   (Lisp_Object n, Lisp_Object killflag)
 {
-  int pos;
+  EMACS_INT pos;
 
   CHECK_NUMBER (n);
 
@@ -276,7 +275,7 @@ After insertion, the value of `auto-fill-function' is called if the
   (Lisp_Object n)
 {
   int remove_boundary = 1;
-  CHECK_NUMBER (n);
+  CHECK_NATNUM (n);
 
   if (!EQ (Vthis_command, current_kboard->Vlast_command))
     nonundocount = 0;
@@ -303,58 +302,38 @@ After insertion, the value of `auto-fill-function' is called if the
     bitch_at_user ();
   {
     int character = translate_char (Vtranslation_table_for_input,
-				    XINT (last_command_event));
-    if (XINT (n) >= 2 && NILP (current_buffer->overwrite_mode))
-      {
-	XSETFASTINT (n, XFASTINT (n) - 2);
-	/* The first one might want to expand an abbrev.  */
-	internal_self_insert (character, 1);
-	/* The bulk of the copies of this char can be inserted simply.
-	   We don't have to handle a user-specified face specially
-	   because it will get inherited from the first char inserted.  */
-	Finsert_char (make_number (character), n, Qt);
-	/* The last one might want to auto-fill.  */
-	internal_self_insert (character, 0);
-      }
-    else
-      while (XINT (n) > 0)
-	{
-	  int val;
-	  /* Ok since old and new vals both nonneg */
-	  XSETFASTINT (n, XFASTINT (n) - 1);
-	  val = internal_self_insert (character, XFASTINT (n) != 0);
-	  if (val == 2)
-	    nonundocount = 0;
-	  frame_make_pointer_invisible ();
-	}
+				    (int) XINT (last_command_event));
+    int val = internal_self_insert (character, XFASTINT (n));
+    if (val == 2)
+      nonundocount = 0;
+    frame_make_pointer_invisible ();
   }
 
   return Qnil;
 }
 
-/* Insert character C.  If NOAUTOFILL is nonzero, don't do autofill
-   even if it is enabled.
+/* Insert N times character C
 
    If this insertion is suitable for direct output (completely simple),
    return 0.  A value of 1 indicates this *might* not have been simple.
    A value of 2 means this did things that call for an undo boundary.  */
 
 static Lisp_Object Qexpand_abbrev;
-static Lisp_Object Qpost_self_insert_hook, Vpost_self_insert_hook;
+static Lisp_Object Qpost_self_insert_hook;
 
 static int
-internal_self_insert (int c, int noautofill)
+internal_self_insert (int c, EMACS_INT n)
 {
   int hairy = 0;
   Lisp_Object tem;
   register enum syntaxcode synt;
-  Lisp_Object overwrite, string;
+  Lisp_Object overwrite;
   /* Length of multi-byte form of C.  */
   int len;
   /* Working buffer and pointer for multi-byte form of C.  */
   unsigned char str[MAX_MULTIBYTE_LENGTH];
-  int chars_to_delete = 0;
-  int spaces_to_insert = 0;
+  EMACS_INT chars_to_delete = 0;
+  EMACS_INT spaces_to_insert = 0;
 
   overwrite = current_buffer->overwrite_mode;
   if (!NILP (Vbefore_change_functions) || !NILP (Vafter_change_functions))
@@ -391,51 +370,46 @@ internal_self_insert (int c, int noautofill)
       /* This is the character after point.  */
       int c2 = FETCH_CHAR (PT_BYTE);
 
-      /* Column the cursor should be placed at after this insertion.
-         The correct value should be calculated only when necessary.  */
-      int target_clm = 0;
-
       /* Overwriting in binary-mode always replaces C2 by C.
 	 Overwriting in textual-mode doesn't always do that.
 	 It inserts newlines in the usual way,
 	 and inserts any character at end of line
 	 or before a tab if it doesn't use the whole width of the tab.  */
-      if (EQ (overwrite, Qoverwrite_mode_binary)
-	  || (c != '\n'
-	      && c2 != '\n'
-	      && ! (c2 == '\t'
-		    && XINT (current_buffer->tab_width) > 0
-		    && XFASTINT (current_buffer->tab_width) < 20
-		    && (target_clm = ((int) current_column () /* iftc */
-				      + XINT (Fchar_width (make_number (c)))),
-			target_clm % XFASTINT (current_buffer->tab_width)))))
+      if (EQ (overwrite, Qoverwrite_mode_binary))
+	chars_to_delete = n;
+      else if (c != '\n' && c2 != '\n')
 	{
-	  int pos = PT;
-	  int pos_byte = PT_BYTE;
+	  EMACS_INT pos = PT;
+	  EMACS_INT pos_byte = PT_BYTE;
+	  /* Column the cursor should be placed at after this insertion.
+	     The correct value should be calculated only when necessary.  */
+	  int target_clm = ((int) current_column () /* iftc */
+			    + n * (int) XINT (Fchar_width (make_number (c))));
 
-	  if (target_clm == 0)
-	    chars_to_delete = 1;
-	  else
-	    {
 	      /* The actual cursor position after the trial of moving
 		 to column TARGET_CLM.  It is greater than TARGET_CLM
 		 if the TARGET_CLM is middle of multi-column
 		 character.  In that case, the new point is set after
 		 that character.  */
 	      int actual_clm
-		= XFASTINT (Fmove_to_column (make_number (target_clm), Qnil));
+		= (int) XFASTINT (Fmove_to_column (make_number (target_clm),
+						   Qnil));
 
 	      chars_to_delete = PT - pos;
 
 	      if (actual_clm > target_clm)
-		{
-		  /* We will delete too many columns.  Let's fill columns
+	    { /* We will delete too many columns.  Let's fill columns
 		     by spaces so that the remaining text won't move.  */
+	      EMACS_INT actual = PT_BYTE;
+	      DEC_POS (actual);
+	      if (FETCH_CHAR (actual) == '\t')
+		/* Rather than add spaces, let's just keep the tab. */
+		chars_to_delete--;
+	      else
 		  spaces_to_insert = actual_clm - target_clm;
 		}
-	    }
+
 	  SET_PT_BOTH (pos, pos_byte);
-	  hairy = 2;
 	}
       hairy = 2;
     }
@@ -474,24 +448,37 @@ internal_self_insert (int c, int noautofill)
 
   if (chars_to_delete)
     {
-      string = make_string_from_bytes (str, 1, len);
+      int mc = ((NILP (current_buffer->enable_multibyte_characters)
+		 && SINGLE_BYTE_CHAR_P (c))
+		? UNIBYTE_TO_CHAR (c) : c);
+      Lisp_Object string = Fmake_string (make_number (n), make_number (mc));
+
       if (spaces_to_insert)
 	{
 	  tem = Fmake_string (make_number (spaces_to_insert),
 			      make_number (' '));
-	  string = concat2 (tem, string);
+	  string = concat2 (string, tem);
 	}
 
       replace_range (PT, PT + chars_to_delete, string, 1, 1, 1);
-      Fforward_char (make_number (1 + spaces_to_insert));
+      Fforward_char (make_number (n + spaces_to_insert));
     }
-  else
+  else if (n > 1)
+    {
+      USE_SAFE_ALLOCA;
+      unsigned char *strn, *p;
+      SAFE_ALLOCA (strn, unsigned char*, n * len);
+      for (p = strn; n > 0; n--, p += len)
+	memcpy (p, str, len);
+      insert_and_inherit (strn, p - strn);
+      SAFE_FREE ();
+    }
+  else if (n > 0)
     insert_and_inherit (str, len);
 
   if ((CHAR_TABLE_P (Vauto_fill_chars)
        ? !NILP (CHAR_TABLE_REF (Vauto_fill_chars, c))
        : (c == ' ' || c == '\n'))
-      && !noautofill
       && !NILP (current_buffer->auto_fill_function))
     {
       Lisp_Object tem;
@@ -509,13 +496,6 @@ internal_self_insert (int c, int noautofill)
 	hairy = 2;
     }
 
-  if ((synt == Sclose || synt == Smath)
-      && !NILP (Vblink_paren_function) && INTERACTIVE
-      && !noautofill)
-    {
-      call0 (Vblink_paren_function);
-      hairy = 2;
-    }
   /* Run hooks for electric keys.  */
   call1 (Vrun_hooks, Qpost_self_insert_hook);
 
@@ -542,15 +522,10 @@ syms_of_cmds (void)
   Qpost_self_insert_hook = intern_c_string ("post-self-insert-hook");
   staticpro (&Qpost_self_insert_hook);
 
-  DEFVAR_LISP ("post-self-insert-hook", &Vpost_self_insert_hook,
+  DEFVAR_LISP ("post-self-insert-hook", Vpost_self_insert_hook,
 	       doc: /* Hook run at the end of `self-insert-command'.
-This run is run after inserting the charater.  */);
+This is run after inserting the character.  */);
   Vpost_self_insert_hook = Qnil;
-
-  DEFVAR_LISP ("blink-paren-function", &Vblink_paren_function,
-	       doc: /* Function called, if non-nil, whenever a close parenthesis is inserted.
-More precisely, a char with closeparen syntax is self-inserted.  */);
-  Vblink_paren_function = Qnil;
 
   defsubr (&Sforward_point);
   defsubr (&Sforward_char);
@@ -585,5 +560,3 @@ keys_of_cmds (void)
   initial_define_key (global_map, Ctl ('F'), "forward-char");
 }
 
-/* arch-tag: 022ba3cd-67f9-4978-9c5d-7d2b18d8644e
-   (do not change this comment) */

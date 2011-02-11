@@ -1,9 +1,8 @@
 ;;; titdic-cnv.el --- convert cxterm dictionary (TIT format) to Quail package -*- coding:iso-2022-7bit; -*-
 
-;; Copyright (C) 1997, 1998, 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1997-1998, 2000-2011  Free Software Foundation, Inc.
 ;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010
+;;   2005, 2006, 2007, 2008, 2009, 2010, 2011
 ;;   National Institute of Advanced Industrial Science and Technology (AIST)
 ;;   Registration Number H14PRO021
 ;; Copyright (C) 2003
@@ -108,7 +107,7 @@ For double-width GB2312 characters correponding to ASCII, use the
 input method `chinese-qj'.")
 
     ("chinese-ecdict" "$(05CKH(B"
-"In this input method, you enter a Chinese (Big5) charactere or word
+"In this input method, you enter a Chinese (Big5) character or word
 by typing the corresponding English word.  For example, if you type
 \"computer\", \"$(0IZH+(B\" is input.
 
@@ -1210,5 +1209,4 @@ to store generated Quail packages."
 ;; coding: iso-2022-7bit
 ;; End:
 
-;; arch-tag: 8ad478b2-a985-4da2-b47f-d8ee5d7c24a3
 ;;; titdic-cnv.el ends here

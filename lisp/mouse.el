@@ -1,10 +1,10 @@
 ;;; mouse.el --- window system-independent mouse support
 
-;; Copyright (C) 1993, 1994, 1995, 1999, 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1993-1995, 1999-2011  Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: hardware, mouse
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -42,7 +42,10 @@
   :group 'mouse)
 
 (defcustom mouse-drag-copy-region nil
-  "If non-nil, mouse drag copies region to kill-ring."
+  "If non-nil, copy to kill-ring upon mouse adjustments of the region.
+
+This affects `mouse-save-then-kill' (\\[mouse-save-then-kill]) in
+addition to mouse drags."
   :type 'boolean
   :version "24.1"
   :group 'mouse)
@@ -181,6 +184,7 @@ items `Turn Off' and `Help'."
     (minor-mode-menu-from-indicator indicator)))
 
 (defun mouse-menu-major-mode-map ()
+  (run-hooks 'activate-menubar-hook 'menu-bar-update-hook)
   (let* (;; Keymap from which to inherit; may be null.
 	 (ancestor (mouse-menu-non-singleton
 		    (and (current-local-map)
@@ -197,9 +201,9 @@ items `Turn Off' and `Help'."
     newmap))
 
 (defun mouse-menu-non-singleton (menubar)
-  "Given menu keymap,
-if it defines exactly one submenu, return just that submenu.
-Otherwise return the whole menu."
+  "Return menu keybar MENUBAR, or a lone submenu inside it.
+If MENUBAR defines exactly one submenu, return just that submenu.
+Otherwise, return MENUBAR."
   (if menubar
       (let (submap)
         (map-keymap
@@ -213,6 +217,7 @@ Otherwise return the whole menu."
   "Return a keymap equivalent to the menu bar.
 The contents are the items that would be in the menu bar whether or
 not it is actually displayed."
+  (run-hooks 'activate-menubar-hook 'menu-bar-update-hook)
   (let* ((local-menu (and (current-local-map)
 			  (lookup-key (current-local-map) [menu-bar])))
 	 (global-menu (lookup-key global-map [menu-bar]))
@@ -1268,14 +1273,24 @@ regardless of where you click."
   (interactive "e")
   ;; Give temporary modes such as isearch a chance to turn off.
   (run-hooks 'mouse-leave-buffer-hook)
+  ;; Without this, confusing things happen upon e.g. inserting into
+  ;; the middle of an active region.
   (when select-active-regions
-    ;; Without this, confusing things happen upon e.g. inserting into
-    ;; the middle of an active region.
-    (deactivate-mark))
+    (let (select-active-regions)
+      (deactivate-mark)))
   (or mouse-yank-at-point (mouse-set-point click))
   (let ((primary
 	 (cond
-	  ((fboundp 'x-get-selection-value) ; MS-DOS and MS-Windows
+	  ((eq system-type 'windows-nt)
+	   ;; MS-Windows emulates PRIMARY in x-get-selection, but not
+	   ;; in x-get-selection-value (the latter only accesses the
+	   ;; clipboard).  So try PRIMARY first, in case they selected
+	   ;; something with the mouse in the current Emacs session.
+	   (or (x-get-selection 'PRIMARY)
+	       (x-get-selection-value)))
+	  ((fboundp 'x-get-selection-value) ; MS-DOS and X.
+	   ;; On X, x-get-selection-value supports more formats and
+	   ;; encodings, so use it in preference to x-get-selection.
 	   (or (x-get-selection-value)
 	       (x-get-selection 'PRIMARY)))
 	  ;; FIXME: What about xterm-mouse-mode etc.?
@@ -1346,8 +1361,13 @@ moving point or mark, whichever is closer, to CLICK.  But if you
 have selected whole words or lines, move point or mark to the
 word or line boundary closest to CLICK instead.
 
+If `mouse-drag-copy-region' is non-nil, this command also saves the
+new region to the kill ring (replacing the previous kill if the
+previous region was just saved to the kill ring).
+
 If this command is called a second consecutive time with the same
-CLICK position, kill the region."
+CLICK position, kill the region (or delete it
+if `mouse-drag-copy-region' is non-nil)"
   (interactive "e")
   (mouse-minibuffer-check click)
   (let* ((posn     (event-start click))
@@ -1369,7 +1389,11 @@ CLICK position, kill the region."
      ((and (eq last-command 'mouse-save-then-kill)
 	   (eq click-pt mouse-save-then-kill-posn)
 	   (eq window (selected-window)))
-      (kill-region (mark t) (point))
+      (if mouse-drag-copy-region
+          ;; Region already saved in the previous click;
+          ;; don't make a duplicate entry, just delete.
+          (delete-region (mark t) (point))
+        (kill-region (mark t) (point)))
       (setq mouse-selection-click-count 0)
       (setq mouse-save-then-kill-posn nil))
 
@@ -1392,6 +1416,9 @@ CLICK position, kill the region."
 	  (goto-char (nth 1 range)))
 	(setq deactivate-mark nil)
 	(mouse-set-region-1)
+        (when mouse-drag-copy-region
+          ;; Region already copied to kill-ring once, so replace.
+          (kill-new (filter-buffer-substring (mark t) (point)) t))
 	;; Arrange for a repeated mouse-3 to kill the region.
 	(setq mouse-save-then-kill-posn click-pt)))
 
@@ -1403,6 +1430,8 @@ CLICK position, kill the region."
 	(if before-scroll (goto-char before-scroll)))
       (exchange-point-and-mark)
       (mouse-set-region-1)
+      (when mouse-drag-copy-region
+        (kill-new (filter-buffer-substring (mark t) (point))))
       (setq mouse-save-then-kill-posn click-pt)))))
 
 
@@ -1700,6 +1729,8 @@ a large number if you prefer a mixed multitude.  The default is 4."
     ("Outline" . "Text")
     ("\\(HT\\|SG\\|X\\|XHT\\)ML" . "SGML")
     ("log\\|diff\\|vc\\|cvs\\|Annotate" . "Version Control") ; "Change Management"?
+    ("Threads\\|Memory\\|Disassembly\\|Breakpoints\\|Frames\\|Locals\\|Registers\\|Inferior I/O\\|Debugger"
+     . "GDB")
     ("Lisp" . "Lisp")))
   "How to group various major modes together in \\[mouse-buffer-menu].
 Each element has the form (REGEXP . GROUPNAME).
@@ -2111,12 +2142,4 @@ choose a font."
 
 (provide 'mouse)
 
-;; This file contains the functionality of the old mldrag.el.
-(defalias 'mldrag-drag-mode-line 'mouse-drag-mode-line)
-(defalias 'mldrag-drag-vertical-line 'mouse-drag-vertical-line)
-(make-obsolete 'mldrag-drag-mode-line 'mouse-drag-mode-line "21.1")
-(make-obsolete 'mldrag-drag-vertical-line 'mouse-drag-vertical-line "21.1")
-(provide 'mldrag)
-
-;; arch-tag: 9a710ce1-914a-4923-9b81-697f7bf82ab3
 ;;; mouse.el ends here

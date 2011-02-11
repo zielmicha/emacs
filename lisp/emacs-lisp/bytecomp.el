@@ -1,12 +1,13 @@
 ;;; bytecomp.el --- compilation of Lisp code into byte code
 
-;; Copyright (C) 1985, 1986, 1987, 1992, 1994, 1998, 2000, 2001, 2002,
-;;   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1985-1987, 1992, 1994, 1998, 2000-2011
+;;   Free Software Foundation, Inc.
 
 ;; Author: Jamie Zawinski <jwz@lucid.com>
 ;;	Hallvard Furuseth <hbf@ulrik.uio.no>
 ;; Maintainer: FSF
 ;; Keywords: lisp
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -35,6 +36,7 @@
 ;; ========================================================================
 ;; Entry points:
 ;;	byte-recompile-directory, byte-compile-file,
+;;      byte-recompile-file,
 ;;     batch-byte-compile, batch-byte-recompile-directory,
 ;;	byte-compile, compile-defun,
 ;;	display-call-tree
@@ -245,10 +247,14 @@ This option is enabled by default because it reduces Emacs memory usage."
   :type 'boolean)
 ;;;###autoload(put 'byte-compile-dynamic-docstrings 'safe-local-variable 'booleanp)
 
+(defconst byte-compile-log-buffer "*Compile-Log*"
+  "Name of the byte-compiler's log buffer.")
+
 (defcustom byte-optimize-log nil
-  "If true, the byte-compiler will log its optimizations into *Compile-Log*.
+  "If non-nil, the byte-compiler will log its optimizations.
 If this is 'source, then only source-level optimizations will be logged.
-If it is 'byte, then only byte-level optimizations will be logged."
+If it is 'byte, then only byte-level optimizations will be logged.
+The information is logged to `byte-compile-log-buffer'."
   :group 'bytecomp
   :type '(choice (const :tag "none" nil)
 		 (const :tag "all" t)
@@ -263,7 +269,7 @@ If it is 'byte, then only byte-level optimizations will be logged."
 (defconst byte-compile-warning-types
   '(redefine callargs free-vars unresolved
 	     obsolete noruntime cl-functions interactive-only
-	     make-local mapcar constants suspicious)
+	     make-local mapcar constants suspicious lexical)
   "The list of warning types used when `byte-compile-warnings' is t.")
 (defcustom byte-compile-warnings t
   "List of warnings that the byte-compiler should issue (t for all).
@@ -294,21 +300,12 @@ suppress.  For example, (not mapcar) will suppress warnings about mapcar."
 		 (set :menu-tag "Some"
                       ,@(mapcar (lambda (x) `(const ,x))
                                 byte-compile-warning-types))))
-;;;###autoload(put 'byte-compile-warnings 'safe-local-variable 'byte-compile-warnings-safe-p)
 
 ;;;###autoload
-(defun byte-compile-warnings-safe-p (x)
-  "Return non-nil if X is valid as a value of `byte-compile-warnings'."
-  (or (booleanp x)
-      (and (listp x)
-           (if (eq (car x) 'not) (setq x (cdr x))
-             t)
-	   (equal (mapcar
-		   (lambda (e)
-		     (when (memq e byte-compile-warning-types)
-		       e))
-		   x)
-		  x))))
+(put 'byte-compile-warnings 'safe-local-variable
+     (lambda (v)
+       (or (symbolp v)
+           (null (delq nil (mapcar (lambda (x) (not (symbolp x))) v))))))
 
 (defun byte-compile-warning-enabled-p (warning)
   "Return non-nil if WARNING is enabled, according to `byte-compile-warnings'."
@@ -882,7 +879,7 @@ Each function's symbol gets added to `byte-compile-noruntime-functions'."
 
 ;; Log something that isn't a warning.
 (defun byte-compile-log-1 (string)
-  (with-current-buffer "*Compile-Log*"
+  (with-current-buffer byte-compile-log-buffer
     (let ((inhibit-read-only t))
       (goto-char (point-max))
       (byte-compile-warning-prefix nil nil)
@@ -990,13 +987,13 @@ Each function's symbol gets added to `byte-compile-noruntime-functions'."
 ;; (compile-mode) will cause this to be loaded.
 (declare-function compilation-forget-errors "compile" ())
 
-;; Log the start of a file in *Compile-Log*, and mark it as done.
+;; Log the start of a file in `byte-compile-log-buffer', and mark it as done.
 ;; Return the position of the start of the page in the log buffer.
 ;; But do nothing in batch mode.
 (defun byte-compile-log-file ()
   (and (not (equal byte-compile-current-file byte-compile-last-logged-file))
        (not noninteractive)
-       (with-current-buffer (get-buffer-create "*Compile-Log*")
+       (with-current-buffer (get-buffer-create byte-compile-log-buffer)
 	 (goto-char (point-max))
 	 (let* ((inhibit-read-only t)
 		(dir (and byte-compile-current-file
@@ -1027,14 +1024,14 @@ Each function's symbol gets added to `byte-compile-noruntime-functions'."
 	   (compilation-forget-errors)
 	   pt))))
 
-;; Log a message STRING in *Compile-Log*.
+;; Log a message STRING in `byte-compile-log-buffer'.
 ;; Also log the current function and file if not already done.
 (defun byte-compile-log-warning (string &optional fill level)
   (let ((warning-prefix-function 'byte-compile-warning-prefix)
 	(warning-type-format "")
 	(warning-fill-prefix (if fill "    "))
 	(inhibit-read-only t))
-    (display-warning 'bytecomp string level "*Compile-Log*")))
+    (display-warning 'bytecomp string level byte-compile-log-buffer)))
 
 (defun byte-compile-warn (format &rest args)
   "Issue a byte compiler warning; use (format FORMAT ARGS...) for message."
@@ -1341,7 +1338,7 @@ extra args."
 	     (not (and (eq (get func 'byte-compile)
 			   'cl-byte-compile-compiler-macro)
 		       (string-match "\\`c[ad]+r\\'" (symbol-name func)))))
-	(byte-compile-warn "Function `%s' from cl package called at runtime"
+	(byte-compile-warn "function `%s' from cl package called at runtime"
 			   func)))
   form)
 
@@ -1450,7 +1447,7 @@ symbol itself."
 	  (warning-series-started
 	   (and (markerp warning-series)
 		(eq (marker-buffer warning-series)
-		    (get-buffer "*Compile-Log*")))))
+		    (get-buffer byte-compile-log-buffer)))))
      (byte-compile-find-cl-functions)
      (if (or (eq warning-series 'byte-compile-warning-series)
 	     warning-series-started)
@@ -1512,7 +1509,7 @@ that already has a `.elc' file."
       nil
     (save-some-buffers)
     (force-mode-line-update))
-  (with-current-buffer (get-buffer-create "*Compile-Log*")
+  (with-current-buffer (get-buffer-create byte-compile-log-buffer)
     (setq default-directory (expand-file-name bytecomp-directory))
     ;; compilation-mode copies value of default-directory.
     (unless (eq major-mode 'compilation-mode)
@@ -1547,22 +1544,12 @@ that already has a `.elc' file."
 	       (if (and (string-match emacs-lisp-file-regexp bytecomp-source)
 			(file-readable-p bytecomp-source)
 			(not (auto-save-file-name-p bytecomp-source))
-			(setq bytecomp-dest
-                              (byte-compile-dest-file bytecomp-source))
-			(if (file-exists-p bytecomp-dest)
-			    ;; File was already compiled.
-			    (or bytecomp-force
-                                (file-newer-than-file-p bytecomp-source
-                                                        bytecomp-dest))
-			  ;; No compiled file exists yet.
-			  (and bytecomp-arg
-			       (or (eq 0 bytecomp-arg)
-				   (y-or-n-p (concat "Compile "
-                                                     bytecomp-source "? "))))))
-		   (progn (if (and noninteractive (not byte-compile-verbose))
-			      (message "Compiling %s..." bytecomp-source))
-			  (let ((bytecomp-res (byte-compile-file
-                                               bytecomp-source)))
+			(not (string-equal dir-locals-file
+					   (file-name-nondirectory
+					    bytecomp-source))))
+		   (progn (let ((bytecomp-res (byte-recompile-file
+                                               bytecomp-source
+                                               bytecomp-force bytecomp-arg)))
 			    (cond ((eq bytecomp-res 'no-byte-compile)
 				   (setq skip-count (1+ skip-count)))
 				  ((eq bytecomp-res t)
@@ -1589,6 +1576,60 @@ This is normally set in local file variables at the end of the elisp file:
 
 ;; Local Variables:\n;; no-byte-compile: t\n;; End: ")
 ;;;###autoload(put 'no-byte-compile 'safe-local-variable 'booleanp)
+
+(defun byte-recompile-file (bytecomp-filename &optional bytecomp-force bytecomp-arg load)
+  "Recompile BYTECOMP-FILENAME file if it needs recompilation.
+This happens when its `.elc' file is older than itself.
+
+If the `.elc' file exists and is up-to-date, normally this
+function *does not* compile BYTECOMP-FILENAME. However, if the
+prefix argument BYTECOMP-FORCE is set, that means do compile
+BYTECOMP-FILENAME even if the destination already exists and is
+up-to-date.
+
+If the `.elc' file does not exist, normally this function *does
+not* compile BYTECOMP-FILENAME. If BYTECOMP-ARG is 0, that means
+compile the file even if it has never been compiled before.
+A nonzero BYTECOMP-ARG means ask the user.
+
+If LOAD is set, `load' the file after compiling.
+
+The value returned is the value returned by `byte-compile-file',
+or 'no-byte-compile if the file did not need recompilation."
+  (interactive
+      (let ((bytecomp-file buffer-file-name)
+	 (bytecomp-file-name nil)
+	 (bytecomp-file-dir nil))
+     (and bytecomp-file
+	  (eq (cdr (assq 'major-mode (buffer-local-variables)))
+	      'emacs-lisp-mode)
+	  (setq bytecomp-file-name (file-name-nondirectory bytecomp-file)
+		bytecomp-file-dir (file-name-directory bytecomp-file)))
+     (list (read-file-name (if current-prefix-arg
+			       "Byte compile file: "
+			     "Byte recompile file: ")
+			   bytecomp-file-dir bytecomp-file-name nil)
+	   current-prefix-arg)))
+  (let ((bytecomp-dest
+         (byte-compile-dest-file bytecomp-filename))
+        ;; Expand now so we get the current buffer's defaults
+        (bytecomp-filename (expand-file-name bytecomp-filename)))
+    (if (if (file-exists-p bytecomp-dest)
+            ;; File was already compiled
+            ;; Compile if forced to, or filename newer
+            (or bytecomp-force
+                (file-newer-than-file-p bytecomp-filename
+                                         bytecomp-dest))
+          (and bytecomp-arg
+               (or (eq 0 bytecomp-arg)
+                   (y-or-n-p (concat "Compile "
+                                     bytecomp-filename "? ")))))
+        (progn
+          (if (and noninteractive (not byte-compile-verbose))
+              (message "Compiling %s..." bytecomp-filename))
+          (byte-compile-file bytecomp-filename load))
+      (when load (load bytecomp-filename))
+      'no-byte-compile)))
 
 ;;;###autoload
 (defun byte-compile-file (bytecomp-filename &optional load)
@@ -1693,17 +1734,28 @@ The value is non-nil if there were no errors, nil if errors."
 	  (insert "\n")			; aaah, unix.
 	    (if (file-writable-p target-file)
 		;; We must disable any code conversion here.
-		(let ((coding-system-for-write 'no-conversion))
+		(let* ((coding-system-for-write 'no-conversion)
+		       ;; Write to a tempfile so that if another Emacs
+		       ;; process is trying to load target-file (eg in a
+		       ;; parallel bootstrap), it does not risk getting a
+		       ;; half-finished file.  (Bug#4196)
+		       (tempfile (make-temp-name target-file))
+		       (kill-emacs-hook
+			(cons (lambda () (ignore-errors (delete-file tempfile)))
+			      kill-emacs-hook)))
 		  (if (memq system-type '(ms-dos 'windows-nt))
 		      (setq buffer-file-type t))
-		  (when (file-exists-p target-file)
-		    ;; Remove the target before writing it, so that any
-		    ;; hard-links continue to point to the old file (this makes
-		    ;; it possible for installed files to share disk space with
-		    ;; the build tree, without causing problems when emacs-lisp
-		    ;; files in the build tree are recompiled).
-		    (delete-file target-file))
-		  (write-region (point-min) (point-max) target-file))
+		  (write-region (point-min) (point-max) tempfile nil 1)
+		  ;; This has the intentional side effect that any
+		  ;; hard-links to target-file continue to
+		  ;; point to the old file (this makes it possible
+		  ;; for installed files to share disk space with
+		  ;; the build tree, without causing problems when
+		  ;; emacs-lisp files in the build tree are
+		  ;; recompiled).  Previously this was accomplished by
+		  ;; deleting target-file before writing it.
+		  (rename-file tempfile target-file t)
+		  (message "Wrote %s" target-file))
 	      ;; This is just to give a better error message than write-region
 	      (signal 'file-error
 		      (list "Opening output file"
@@ -1784,14 +1836,7 @@ With argument ARG, insert value in current buffer after the form."
        (set-buffer-multibyte t)
        (erase-buffer)
        ;;	 (emacs-lisp-mode)
-       (setq case-fold-search nil)
-       ;; This is a kludge.  Some operating systems (OS/2, DOS) need to
-       ;; write files containing binary information specially.
-       ;; Under most circumstances, such files will be in binary
-       ;; overwrite mode, so those OS's use that flag to guess how
-       ;; they should write their data.  Advise them that .elc files
-       ;; need to be written carefully.
-       (setq overwrite-mode 'overwrite-mode-binary))
+       (setq case-fold-search nil))
      (displaying-byte-compile-warnings
       (with-current-buffer bytecomp-inbuffer
 	(and bytecomp-filename
@@ -2012,9 +2057,9 @@ list that represents a doc string reference.
                         ;; to objects already output
                         ;; (for instance, gensyms in the arg list).
                         (let (non-nil)
-                          (dotimes (i (length print-number-table))
-                            (if (aref print-number-table i)
-                                (setq non-nil t)))
+                          (when (hash-table-p print-number-table)
+                            (maphash (lambda (k v) (if v (setq non-nil t)))
+                                     print-number-table))
                           (not non-nil)))
                    ;; Output the byte code and constants specially
                    ;; for lazy dynamic loading.
@@ -2140,6 +2185,11 @@ list that represents a doc string reference.
       ;; Since there is no doc string, we can compile this as a normal form,
       ;; and not do a file-boundary.
       (byte-compile-keep-pending form)
+    (when (and (symbolp (nth 1 form))
+               (not (string-match "[-*/:$]" (symbol-name (nth 1 form))))
+               (byte-compile-warning-enabled-p 'lexical))
+      (byte-compile-warn "global/dynamic var `%s' lacks a prefix"
+                         (nth 1 form)))
     (push (nth 1 form) byte-compile-bound-variables)
     (if (eq (car form) 'defconst)
 	(push (nth 1 form) byte-compile-const-variables))
@@ -3791,6 +3841,11 @@ that suppresses all warnings during execution of BODY."
 
 (defun byte-compile-defvar (form)
   ;; This is not used for file-level defvar/consts with doc strings.
+  (when (and (symbolp (nth 1 form))
+             (not (string-match "[-*/:$]" (symbol-name (nth 1 form))))
+             (byte-compile-warning-enabled-p 'lexical))
+    (byte-compile-warn "global/dynamic var `%s' lacks a prefix"
+                       (nth 1 form)))
   (let ((fun (nth 0 form))
 	(var (nth 1 form))
 	(value (nth 2 form))
@@ -4239,6 +4294,8 @@ and corresponding effects."
 
 (defvar byte-code-meter)
 (defun byte-compile-report-ops ()
+  (or (boundp 'byte-metering-on)
+      (error "You must build Emacs with -DBYTE_CODE_METER to use this"))
   (with-output-to-temp-buffer "*Meter*"
     (set-buffer "*Meter*")
     (let ((i 0) n op off)
@@ -4287,5 +4344,4 @@ and corresponding effects."
 
 (run-hooks 'bytecomp-load-hook)
 
-;; arch-tag: 9c97b0f0-8745-4571-bfc3-8dceb677292a
 ;;; bytecomp.el ends here

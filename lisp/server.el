@@ -1,8 +1,6 @@
 ;;; server.el --- Lisp code for GNU Emacs running as server process
 
-;; Copyright (C) 1986, 1987, 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-;;   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1986-1987, 1992, 1994-2011  Free Software Foundation, Inc.
 
 ;; Author: William Sommerfeld <wesommer@athena.mit.edu>
 ;; Maintainer: FSF
@@ -110,7 +108,18 @@ If set, the server accepts remote connections; otherwise it is local."
           (string :tag "Name or IP address")
           (const :tag "Local" nil))
   :version "22.1")
+;;;###autoload
 (put 'server-host 'risky-local-variable t)
+
+(defcustom server-port nil
+  "The port number that the server process should listen on."
+  :group 'server
+  :type '(choice
+          (string :tag "Port number")
+          (const :tag "Random" nil))
+  :version "24.1")
+;;;###autoload
+(put 'server-port 'risky-local-variable t)
 
 (defcustom server-auth-dir (locate-user-emacs-file "server/")
   "Directory for server authentication files.
@@ -122,6 +131,7 @@ directory residing in a NTFS partition instead."
   :group 'server
   :type 'directory
   :version "22.1")
+;;;###autoload
 (put 'server-auth-dir 'risky-local-variable t)
 
 (defcustom server-raise-frame t
@@ -486,7 +496,7 @@ See variable `server-auth-dir' for details."
 	(error "The directory `%s' is unsafe" dir)))))
 
 ;;;###autoload
-(defun server-start (&optional leave-dead)
+(defun server-start (&optional leave-dead inhibit-prompt)
   "Allow this Emacs process to be a server for client processes.
 This starts a server communications subprocess through which
 client \"editors\" can send your editing commands to this Emacs
@@ -496,7 +506,10 @@ Emacs distribution as your standard \"editor\".
 Optional argument LEAVE-DEAD (interactively, a prefix arg) means just
 kill any existing server communications subprocess.
 
-If a server is already running, the server is not started.
+If a server is already running, restart it.  If clients are
+running, ask the user for confirmation first, unless optional
+argument INHIBIT-PROMPT is non-nil.
+
 To force-start a server, do \\[server-force-delete] and then
 \\[server-start]."
   (interactive "P")
@@ -504,12 +517,14 @@ To force-start a server, do \\[server-force-delete] and then
 	    ;; Ask the user before deleting existing clients---except
 	    ;; when we can't get user input, which may happen when
 	    ;; doing emacsclient --eval "(kill-emacs)" in daemon mode.
-	    (if (and (daemonp)
-		     (null (cdr (frame-list)))
-		     (eq (selected-frame) terminal-frame))
-		leave-dead
-	      (yes-or-no-p
-	       "The current server still has clients; delete them? ")))
+	    (cond
+	     ((and (daemonp)
+		   (null (cdr (frame-list)))
+		   (eq (selected-frame) terminal-frame))
+	      leave-dead)
+	     (inhibit-prompt t)
+	     (t (yes-or-no-p
+		 "The current server still has clients; delete them? "))))
     (let* ((server-dir (if server-use-tcp server-auth-dir server-socket-dir))
 	   (server-file (expand-file-name server-name server-dir)))
       (when server-process
@@ -548,7 +563,7 @@ server or call `M-x server-force-delete' to forcibly disconnect it.")
 	  (add-hook 'delete-frame-functions 'server-handle-delete-frame)
 	  (add-hook 'kill-buffer-query-functions 'server-kill-buffer-query-function)
 	  (add-hook 'kill-emacs-query-functions 'server-kill-emacs-query-function)
-	  (add-hook 'kill-emacs-hook (lambda () (server-mode -1))) ;Cleanup upon exit.
+	  (add-hook 'kill-emacs-hook 'server-force-stop) ;Cleanup upon exit.
 	  (setq server-process
 		(apply #'make-network-process
 		       :name server-name
@@ -564,8 +579,8 @@ server or call `M-x server-force-delete' to forcibly disconnect it.")
 		       ;; The other args depend on the kind of socket used.
 		       (if server-use-tcp
 			   (list :family 'ipv4  ;; We're not ready for IPv6 yet
-				 :service t
-				 :host (or server-host "127.0.0.1") ;; See bug#6781
+				 :service (or server-port t)
+				 :host (or server-host 'local)
 				 :plist '(:authenticated nil))
 			 (list :family 'local
 			       :service server-file
@@ -586,8 +601,13 @@ server or call `M-x server-force-delete' to forcibly disconnect it.")
 		(setq buffer-file-coding-system 'no-conversion)
 		(insert (format-network-address
 			 (process-contact server-process :local))
-			" " (int-to-string (emacs-pid))
+			" " (number-to-string (emacs-pid)) ; Kept for compatibility
 			"\n" auth-key)))))))))
+
+(defun server-force-stop ()
+  "Kill all connections to the current server.
+This function is meant to be called from `kill-emacs-hook'."
+  (server-start t t))
 
 ;;;###autoload
 (defun server-force-delete (&optional name)
@@ -706,9 +726,6 @@ Server mode runs a process that accepts commands from the
     ;; Display *scratch* by default.
     (switch-to-buffer (get-buffer-create "*scratch*") 'norecord)
 
-    ;; Reply with our pid.
-    (server-send-string proc (concat "-emacs-pid "
-                                     (number-to-string (emacs-pid)) "\n"))
     frame))
 
 (defun server-create-window-system-frame (display nowait proc parent-id)
@@ -862,7 +879,7 @@ The following commands are accepted by the client:
   returned by -eval.
 
 `-error DESCRIPTION'
-  Signal an error (but continue processing).
+  Signal an error and delete process PROC.
 
 `-suspend'
   Suspend this terminal, i.e., stop the client process.
@@ -879,6 +896,9 @@ The following commands are accepted by the client:
       (server-log "Authentication failed" proc)
       (server-send-string
        proc (concat "-error " (server-quote-arg "Authentication failed")))
+      ;; Before calling `delete-process', give emacsclient time to
+      ;; receive the error string and shut down on its own.
+      (sit-for 1)
       (delete-process proc)
       ;; We return immediately
       (return-from server-process-filter)))
@@ -889,6 +909,9 @@ The following commands are accepted by the client:
   (condition-case err
       (progn
 	(server-add-client proc)
+	;; Send our pid
+	(server-send-string proc (concat "-emacs-pid "
+					 (number-to-string (emacs-pid)) "\n"))
 	(if (not (string-match "\n" string))
             ;; Save for later any partial line that remains.
             (when (> (length string) 0)
@@ -1093,9 +1116,7 @@ The following commands are accepted by the client:
     (condition-case err
         (let* ((buffers
                 (when files
-                  (run-hooks 'pre-command-hook)
-                  (prog1 (server-visit-files files proc nowait)
-                    (run-hooks 'post-command-hook)))))
+                  (server-visit-files files proc nowait))))
 
           (mapc 'funcall (nreverse commands))
 
@@ -1131,6 +1152,9 @@ The following commands are accepted by the client:
      proc (concat "-error " (server-quote-arg
                              (error-message-string err))))
     (server-log (error-message-string err) proc)
+    ;; Before calling `delete-process', give emacsclient time to
+    ;; receive the error string and shut down on its own.
+    (sit-for 5)
     (delete-process proc)))
 
 (defun server-goto-line-column (line-col)
@@ -1166,8 +1190,13 @@ so don't mark these buffers specially, just visit them normally."
 	       (obuf (get-file-buffer filen)))
 	  (add-to-history 'file-name-history filen)
 	  (if (null obuf)
-              (set-buffer (find-file-noselect filen))
+	      (progn
+		(run-hooks 'pre-command-hook)  
+		(set-buffer (find-file-noselect filen)))
             (set-buffer obuf)
+	    ;; separately for each file, in sync with post-command hooks,
+	    ;; with the new buffer current:
+	    (run-hooks 'pre-command-hook)  
             (cond ((file-exists-p filen)
                    (when (not (verify-visited-file-modtime obuf))
                      (revert-buffer t nil)))
@@ -1179,7 +1208,9 @@ so don't mark these buffers specially, just visit them normally."
             (unless server-buffer-clients
               (setq server-existing-buffer t)))
           (server-goto-line-column (cdr file))
-          (run-hooks 'server-visit-hook))
+          (run-hooks 'server-visit-hook)
+	  ;; hooks may be specific to current buffer:
+	  (run-hooks 'post-command-hook)) 
 	(unless nowait
 	  ;; When the buffer is killed, inform the clients.
 	  (add-hook 'kill-buffer-hook 'server-kill-buffer nil t)
@@ -1462,5 +1493,4 @@ only these files will be asked to be saved."
 
 (provide 'server)
 
-;; arch-tag: 1f7ecb42-f00a-49f8-906d-61995d84c8d6
 ;;; server.el ends here

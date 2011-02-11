@@ -1,7 +1,6 @@
 ;;; make-mode.el --- makefile editing commands for Emacs
 
-;; Copyright (C) 1992, 1994, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-;;   2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1994, 1999-2011  Free Software Foundation, Inc.
 
 ;; Author: Thomas Neumann <tom@smart.bo.open.de>
 ;;	Eric S. Raymond <esr@snark.thyrsus.com>
@@ -505,15 +504,16 @@ not be enclosed in { } or ( )."
    cpp-font-lock-keywords))
 
 
-(defconst makefile-font-lock-syntactic-keywords
-  ;; From sh-script.el.
-  ;; A `#' begins a comment in sh when it is unquoted and at the beginning
-  ;; of a word.  In the shell, words are separated by metacharacters.
-  ;; The list of special chars is taken from the single-unix spec of the
-  ;; shell command language (under `quoting') but with `$' removed.
-  '(("[^|&;<>()`\\\"' \t\n]\\(#+\\)" 1 "_")
-    ;; Change the syntax of a quoted newline so that it does not end a comment.
-    ("\\\\\n" 0 ".")))
+(defconst makefile-syntax-propertize-function
+  (syntax-propertize-rules
+   ;; From sh-script.el.
+   ;; A `#' begins a comment in sh when it is unquoted and at the beginning
+   ;; of a word.  In the shell, words are separated by metacharacters.
+   ;; The list of special chars is taken from the single-unix spec of the
+   ;; shell command language (under `quoting') but with `$' removed.
+   ("[^|&;<>()`\\\"' \t\n]\\(#+\\)" (1 "_"))
+   ;; Change the syntax of a quoted newline so that it does not end a comment.
+   ("\\\\\n" (0 "."))))
 
 (defvar makefile-imenu-generic-expression
   `(("Dependencies" makefile-previous-dependency 1)
@@ -872,9 +872,9 @@ Makefile mode can be configured by modifying the following variables:
        '(makefile-font-lock-keywords
          nil nil
          ((?$ . "."))
-         backward-paragraph
-         (font-lock-syntactic-keywords
-          . makefile-font-lock-syntactic-keywords)))
+         backward-paragraph))
+  (set (make-local-variable 'syntax-propertize-function)
+       makefile-syntax-propertize-function)
 
   ;; Add-log.
   (set (make-local-variable 'add-log-current-defun-function)
@@ -943,15 +943,9 @@ Makefile mode can be configured by modifying the following variables:
 (define-derived-mode makefile-imake-mode makefile-mode "Imakefile"
   "An adapted `makefile-mode' that knows about imake."
   :syntax-table makefile-imake-mode-syntax-table
-  (let ((base `(makefile-imake-font-lock-keywords ,@(cdr font-lock-defaults)))
-	new)
-    ;; Remove `font-lock-syntactic-keywords' entry from font-lock-defaults.
-    (mapc (lambda (elt)
-	    (unless (and (consp elt)
-			 (eq (car elt) 'font-lock-syntactic-keywords))
-	      (setq new (cons elt new))))
-	  base)
-    (setq font-lock-defaults (nreverse new))))
+  (set (make-local-variable 'syntax-propertize-function) nil)
+  (setq font-lock-defaults
+        `(makefile-imake-font-lock-keywords ,@(cdr font-lock-defaults))))
 
 
 
@@ -1844,5 +1838,4 @@ If it isn't in one, return nil."
 
 (provide 'make-mode)
 
-;; arch-tag: bd23545a-de91-44fb-b1b2-feafbb2635a0
 ;;; make-mode.el ends here

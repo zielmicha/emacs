@@ -1,12 +1,11 @@
 ;;; isearch.el --- incremental search minor mode
 
-;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1999, 2000, 2001,
-;;   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1992-1997, 1999-2011  Free Software Foundation, Inc.
 
 ;; Author: Daniel LaLiberte <liberte@cs.uiuc.edu>
 ;; Maintainer: FSF
 ;; Keywords: matching
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -238,7 +237,7 @@ Default value, nil, means edit the string instead."
   "Face for highlighting Isearch matches."
   :group 'isearch
   :group 'basic-faces)
-(defvar isearch 'isearch)
+(defvar isearch-face 'isearch)
 
 (defface isearch-fail
   '((((class color) (min-colors 88) (background light))
@@ -274,30 +273,37 @@ and `lazy-highlight-interval')."
   :group 'isearch
   :group 'matching)
 
+(define-obsolete-variable-alias 'isearch-lazy-highlight-cleanup
+                                'lazy-highlight-cleanup
+                                "22.1")
+
 (defcustom lazy-highlight-cleanup t
   "Controls whether to remove extra highlighting after a search.
 If this is nil, extra highlighting can be \"manually\" removed with
 \\[lazy-highlight-cleanup]."
   :type 'boolean
   :group 'lazy-highlight)
-(define-obsolete-variable-alias 'isearch-lazy-highlight-cleanup
-                                'lazy-highlight-cleanup
+
+(define-obsolete-variable-alias 'isearch-lazy-highlight-initial-delay
+                                'lazy-highlight-initial-delay
                                 "22.1")
 
 (defcustom lazy-highlight-initial-delay 0.25
   "Seconds to wait before beginning to lazily highlight all matches."
   :type 'number
   :group 'lazy-highlight)
-(define-obsolete-variable-alias 'isearch-lazy-highlight-initial-delay
-                                'lazy-highlight-initial-delay
+
+(define-obsolete-variable-alias 'isearch-lazy-highlight-interval
+                                'lazy-highlight-interval
                                 "22.1")
 
 (defcustom lazy-highlight-interval 0 ; 0.0625
   "Seconds between lazily highlighting successive matches."
   :type 'number
   :group 'lazy-highlight)
-(define-obsolete-variable-alias 'isearch-lazy-highlight-interval
-                                'lazy-highlight-interval
+
+(define-obsolete-variable-alias 'isearch-lazy-highlight-max-at-a-time
+                                'lazy-highlight-max-at-a-time
                                 "22.1")
 
 (defcustom lazy-highlight-max-at-a-time 20
@@ -308,9 +314,6 @@ A value of nil means highlight all matches."
   :type '(choice (const :tag "All" nil)
 		 (integer :tag "Some"))
   :group 'lazy-highlight)
-(define-obsolete-variable-alias 'isearch-lazy-highlight-max-at-a-time
-                                'lazy-highlight-max-at-a-time
-                                "22.1")
 
 (defface lazy-highlight
   '((((class color) (min-colors 88) (background light))
@@ -326,10 +329,10 @@ A value of nil means highlight all matches."
   :group 'lazy-highlight
   :group 'basic-faces)
 (define-obsolete-face-alias 'isearch-lazy-highlight-face 'lazy-highlight "22.1")
-(defvar lazy-highlight-face 'lazy-highlight)
 (define-obsolete-variable-alias 'isearch-lazy-highlight-face
                                 'lazy-highlight-face
                                 "22.1")
+(defvar lazy-highlight-face 'lazy-highlight)
 
 ;; Define isearch help map.
 
@@ -1239,9 +1242,9 @@ Use `isearch-exit' to quit without signaling."
   (interactive)
 ;;  (ding)  signal instead below, if quitting
   (discard-input)
-  (if isearch-success
-      ;; If search is successful, move back to starting point
-      ;; and really do quit.
+  (if (and isearch-success (not isearch-error))
+      ;; If search is successful and has no incomplete regexp,
+      ;; move back to starting point and really do quit.
       (progn
         (setq isearch-success nil)
         (isearch-cancel))
@@ -1989,12 +1992,6 @@ Isearch mode."
 	   (setq char (unibyte-char-to-multibyte char)))
       (isearch-process-search-char char))))
 
-(defun isearch-return-char ()
-  "Convert return into newline for incremental search."
-  (interactive)
-  (isearch-process-search-char ?\n))
-(make-obsolete 'isearch-return-char 'isearch-printing-char "19.7")
-
 (defun isearch-printing-char ()
   "Add this ordinary printing character to the search string and search."
   (interactive)
@@ -2536,7 +2533,7 @@ since they have special meaning in a regexp."
 	(setq isearch-overlay (make-overlay beg end))
 	;; 1001 is higher than lazy's 1000 and ediff's 100+
 	(overlay-put isearch-overlay 'priority 1001)
-	(overlay-put isearch-overlay 'face isearch))))
+	(overlay-put isearch-overlay 'face isearch-face))))
 
 (defun isearch-dehighlight ()
   (when isearch-overlay
@@ -2582,6 +2579,7 @@ since they have special meaning in a regexp."
 (defvar isearch-lazy-highlight-regexp nil)
 (defvar isearch-lazy-highlight-space-regexp nil)
 (defvar isearch-lazy-highlight-forward nil)
+(defvar isearch-lazy-highlight-error nil)
 
 (defun lazy-highlight-cleanup (&optional force)
   "Stop lazy highlighting and remove extra highlighting from current buffer.
@@ -2623,9 +2621,13 @@ by other Emacs features."
                  (not (= (window-end)   ; Window may have been split/joined.
 			 isearch-lazy-highlight-window-end))
 		 (not (eq isearch-forward
-			  isearch-lazy-highlight-forward))))
+			  isearch-lazy-highlight-forward))
+		 ;; In case we are recovering from an error.
+		 (not (equal isearch-error
+			     isearch-lazy-highlight-error))))
     ;; something important did indeed change
     (lazy-highlight-cleanup t) ;kill old loop & remove overlays
+    (setq isearch-lazy-highlight-error isearch-error)
     (when (not isearch-error)
       (setq isearch-lazy-highlight-start-limit beg
 	    isearch-lazy-highlight-end-limit end)
@@ -2763,5 +2765,4 @@ CASE-FOLD non-nil means the search was case-insensitive."
   (isearch-search)
   (isearch-update))
 
-;; arch-tag: 74850515-f7d8-43a6-8a2c-ca90a4c1e675
 ;;; isearch.el ends here

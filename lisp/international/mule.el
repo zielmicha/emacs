@@ -1,10 +1,8 @@
 ;;; mule.el --- basic commands for multilingual environment
 
-;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-;;   2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1997-2011  Free Software Foundation, Inc.
 ;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010
+;;   2005, 2006, 2007, 2008, 2009, 2010, 2011
 ;;   National Institute of Advanced Industrial Science and Technology (AIST)
 ;;   Registration Number H14PRO021
 ;; Copyright (C) 2003
@@ -635,18 +633,19 @@ VALUE must be a translation table to use on encoding.
 
 VALUE must be a function to call after some text is inserted and
 decoded by the coding system itself and before any functions in
-`after-insert-functions' are called.  The arguments to this function
-are the same as those of a function in `after-insert-file-functions',
-i.e. LENGTH of the text to be decoded with point at the head of it,
-and the function should leave point unchanged.
+`after-insert-functions' are called.  This function is passed one
+argument; the number of characters in the text to convert, with
+point at the start of the text.  The function should leave point
+the same, and return the new character count.
 
 `:pre-write-conversion'
 
 VALUE must be a function to call after all functions in
-`write-region-annotate-functions' and `buffer-file-format' are called,
-and before the text is encoded by the coding system itself.  The
-arguments to this function are the same as those of a function in
-`write-region-annotate-functions'.
+`write-region-annotate-functions' and `buffer-file-format' are
+called, and before the text is encoded by the coding system
+itself.  This function should convert the whole text in the
+current buffer.  For backward compatibility, this function is
+passed two arguments which can be ignored.
 
 `:default-char'
 
@@ -1610,7 +1609,7 @@ in-place."
       (set-buffer (generate-new-buffer " *temp"))
       (set-buffer-multibyte (multibyte-string-p from))
       (insert from)
-      (setq from 1 to (point-max)))
+      (setq from (point-min) to (point-max)))
     (save-restriction
       (narrow-to-region from to)
       (goto-char from)
@@ -1679,7 +1678,7 @@ ARC\\|ZIP\\|LZH\\|LHA\\|ZOO\\|[JEW]AR\\|XPI\\|RAR\\|7Z\\)\\'"
      . no-conversion-multibyte)
     ("\\.\\(exe\\|EXE\\)\\'" . no-conversion)
     ("\\.\\(sx[dmicw]\\|odt\\|tar\\|tgz\\)\\'" . no-conversion)
-    ("\\.\\(gz\\|Z\\|bz\\|bz2\\|gpg\\)\\'" . no-conversion)
+    ("\\.\\(gz\\|Z\\|bz\\|bz2\\|xz\\|gpg\\)\\'" . no-conversion)
     ("\\.\\(jpe?g\\|png\\|gif\\|tiff?\\|p[bpgn]m\\)\\'" . no-conversion)
     ("\\.pdf\\'" . no-conversion)
     ("/#[^/]+#\\'" . emacs-mule)))
@@ -1690,6 +1689,7 @@ A file whose name matches REGEXP is decoded by CODING-SYSTEM on reading.
 The settings in this alist take priority over `coding:' tags
 in the file (see the function `set-auto-coding')
 and the contents of `file-coding-system-alist'."
+  :version "24.1"                       ; added xz
   :group 'files
   :group 'mule
   :type '(repeat (cons (regexp :tag "File name regexp")
@@ -2297,13 +2297,12 @@ It returns the number of characters changed."
 	(setq table val)))
   (translate-region-internal start end table))
 
-(put 'with-category-table 'lisp-indent-function 1)
-
 (defmacro with-category-table (table &rest body)
   "Execute BODY like `progn' with TABLE the current category table.
 The category table of the current buffer is saved, BODY is evaluated,
 then the saved table is restored, even in case of an abnormal exit.
 Value is what BODY returns."
+  (declare (indent 1) (debug t))
   (let ((old-table (make-symbol "old-table"))
 	(old-buffer (make-symbol "old-buffer")))
     `(let ((,old-table (category-table))
@@ -2443,5 +2442,4 @@ added by processing software."
 ;;;
 (provide 'mule)
 
-;; arch-tag: 9aebaa6e-0e8a-40a9-b857-cb5d04a39e7c
 ;;; mule.el ends here

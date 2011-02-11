@@ -1,13 +1,13 @@
 ;;; cal-dst.el --- calendar functions for daylight saving rules
 
-;; Copyright (C) 1993, 1994, 1995, 1996, 2001, 2002, 2003, 2004, 2005,
-;;   2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1993-1996, 2001-2011  Free Software Foundation, Inc.
 
 ;; Author: Paul Eggert <eggert@twinsun.com>
 ;;         Edward M. Reingold <reingold@cs.uiuc.edu>
 ;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: calendar
 ;; Human-Keywords: daylight saving time, calendar, diary, holidays
+;; Package: calendar
 
 ;; This file is part of GNU Emacs.
 
@@ -473,5 +473,4 @@ Conversion to daylight saving time is done according to
 
 (provide 'cal-dst)
 
-;; arch-tag: a141d204-213c-4ca5-bdc6-f9df3aa92aad
 ;;; cal-dst.el ends here

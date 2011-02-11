@@ -1,7 +1,6 @@
 /* X Communication module for terminals which understand the X protocol.
-   Copyright (C) 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-                 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-                 Free Software Foundation, Inc.
+
+Copyright (C) 1989, 1993-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -46,9 +45,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <sys/types.h>
 #endif /* makedev */
 
-#ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
-#endif /* ! defined (HAVE_SYS_IOCTL_H) */
 
 #include "systime.h"
 
@@ -91,9 +88,8 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
-#ifdef HAVE_UNISTD_H
+
 #include <unistd.h>
-#endif
 
 #ifdef USE_GTK
 #include "gtkutil.h"
@@ -149,10 +145,6 @@ int use_xim = 0;  /* configure --without-xim */
 
 
 
-/* Non-nil means Emacs uses toolkit scroll bars.  */
-
-Lisp_Object Vx_toolkit_scroll_bars;
-
 /* Non-zero means that a HELP_EVENT has been generated since Emacs
    start.  */
 
@@ -160,14 +152,6 @@ static int any_help_event_p;
 
 /* Last window where we saw the mouse.  Used by mouse-autoselect-window.  */
 static Lisp_Object last_window;
-
-/* Non-zero means make use of UNDERLINE_POSITION font properties.  */
-
-int x_use_underline_position_properties;
-
-/* Non-zero means to draw the underline at the same place as the descent line.  */
-
-int x_underline_at_descent_line;
 
 /* This is a chain of structures for all the X displays currently in
    use.  */
@@ -208,11 +192,6 @@ static String Xt_default_resources[] = {0};
 /* Non-zero means user is interacting with a toolkit scroll bar.  */
 
 static int toolkit_scroll_bar_interaction;
-
-/* Non-zero means to not move point as a result of clicking on a
-   frame to focus it (when focus-follows-mouse is nil).  */
-
-int x_mouse_click_focus_ignore_position;
 
 /* Non-zero timeout value means ignore next mouse click if it arrives
    before that timeout elapses (i.e. as part of the same sequence of
@@ -284,10 +263,6 @@ static int input_signal_count;
 
 static int x_noop_count;
 
-/* The keysyms to use for the various modifiers.  */
-
-Lisp_Object Vx_alt_keysym, Vx_hyper_keysym, Vx_meta_keysym, Vx_super_keysym;
-Lisp_Object Vx_keysym_table;
 static Lisp_Object Qalt, Qhyper, Qmeta, Qsuper, Qmodifier_value;
 
 static Lisp_Object Qvendor_specific_keysyms;
@@ -304,11 +279,34 @@ Lisp_Object Qx_gtk_map_stock;
 /* Some functions take this as char *, not const char *.  */
 static char emacs_class[] = EMACS_CLASS;
 
-/* Used in x_flush.  */
+/* XEmbed implementation.  */
 
-extern XrmDatabase x_load_resources (Display *, const char *, const char *,
-				     const char *);
-extern int x_bitmap_mask (FRAME_PTR, int);
+#define XEMBED_VERSION 0
+
+enum xembed_info
+  {
+    XEMBED_MAPPED = 1 << 0
+  };
+
+enum xembed_message
+  {
+    XEMBED_EMBEDDED_NOTIFY        = 0,
+    XEMBED_WINDOW_ACTIVATE        = 1,
+    XEMBED_WINDOW_DEACTIVATE      = 2,
+    XEMBED_REQUEST_FOCUS          = 3,
+    XEMBED_FOCUS_IN               = 4,
+    XEMBED_FOCUS_OUT              = 5,
+    XEMBED_FOCUS_NEXT             = 6,
+    XEMBED_FOCUS_PREV             = 7,
+
+    XEMBED_MODALITY_ON            = 10,
+    XEMBED_MODALITY_OFF           = 11,
+    XEMBED_REGISTER_ACCELERATOR   = 12,
+    XEMBED_UNREGISTER_ACCELERATOR = 13,
+    XEMBED_ACTIVATE_ACCELERATOR   = 14
+  };
+
+/* Used in x_flush.  */
 
 static int x_alloc_nearest_color_1 (Display *, Colormap, XColor *);
 static void x_set_window_size_1 (struct frame *, int, int, int);
@@ -410,9 +408,8 @@ struct record event_record[100];
 
 int event_record_index;
 
-record_event (locus, type)
-     char *locus;
-     int type;
+void
+record_event (char *locus, int type)
 {
   if (event_record_index == sizeof (event_record) / sizeof (struct record))
     event_record_index = 0;
@@ -441,7 +438,6 @@ x_display_info_for_display (Display *dpy)
 }
 
 #define OPAQUE  0xffffffff
-#define OPACITY "_NET_WM_WINDOW_OPACITY"
 
 void
 x_set_frame_alpha (struct frame *f)
@@ -485,25 +481,25 @@ x_set_frame_alpha (struct frame *f)
     unsigned long n, left;
 
     x_catch_errors (dpy);
-    rc = XGetWindowProperty (dpy, win, XInternAtom(dpy, OPACITY, False),
+    rc = XGetWindowProperty (dpy, win, dpyinfo->Xatom_net_wm_window_opacity,
 			     0L, 1L, False, XA_CARDINAL,
 			     &actual, &format, &n, &left,
 			     &data);
 
     if (rc == Success && actual != None)
-      if (*(unsigned long *)data == opac)
-	{
-	  XFree ((void *) data);
-	  x_uncatch_errors ();
-	  return;
-	}
-      else
+      {
 	XFree ((void *) data);
+	if (*(unsigned long *)data == opac)
+	  {
+	    x_uncatch_errors ();
+	    return;
+	  }
+      }
     x_uncatch_errors ();
   }
 
   x_catch_errors (dpy);
-  XChangeProperty (dpy, win, XInternAtom (dpy, OPACITY, False),
+  XChangeProperty (dpy, win, dpyinfo->Xatom_net_wm_window_opacity,
 		   XA_CARDINAL, 32, PropModeReplace,
 		   (unsigned char *) &opac, 1L);
   x_uncatch_errors ();
@@ -547,22 +543,22 @@ static void
 x_update_window_begin (struct window *w)
 {
   struct frame *f = XFRAME (WINDOW_FRAME (w));
-  struct x_display_info *display_info = FRAME_X_DISPLAY_INFO (f);
+  Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (f);
 
   updated_window = w;
   set_output_cursor (&w->cursor);
 
   BLOCK_INPUT;
 
-  if (f == display_info->mouse_face_mouse_frame)
+  if (f == hlinfo->mouse_face_mouse_frame)
     {
       /* Don't do highlighting for mouse motion during the update.  */
-      display_info->mouse_face_defer = 1;
+      hlinfo->mouse_face_defer = 1;
 
       /* If F needs to be redrawn, simply forget about any prior mouse
 	 highlighting.  */
       if (FRAME_GARBAGED_P (f))
-	display_info->mouse_face_window = Qnil;
+	hlinfo->mouse_face_window = Qnil;
     }
 
   UNBLOCK_INPUT;
@@ -602,7 +598,7 @@ x_draw_vertical_window_border (struct window *w, int x, int y0, int y1)
 static void
 x_update_window_end (struct window *w, int cursor_on_p, int mouse_face_overwritten_p)
 {
-  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (XFRAME (w->frame));
+  Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (XFRAME (w->frame));
 
   if (!w->pseudo_window_p)
     {
@@ -623,9 +619,9 @@ x_update_window_end (struct window *w, int cursor_on_p, int mouse_face_overwritt
      XTframe_up_to_date to redisplay the mouse highlight.  */
   if (mouse_face_overwritten_p)
     {
-      dpyinfo->mouse_face_beg_row = dpyinfo->mouse_face_beg_col = -1;
-      dpyinfo->mouse_face_end_row = dpyinfo->mouse_face_end_col = -1;
-      dpyinfo->mouse_face_window = Qnil;
+      hlinfo->mouse_face_beg_row = hlinfo->mouse_face_beg_col = -1;
+      hlinfo->mouse_face_end_row = hlinfo->mouse_face_end_col = -1;
+      hlinfo->mouse_face_window = Qnil;
     }
 
   updated_window = NULL;
@@ -639,7 +635,7 @@ static void
 x_update_end (struct frame *f)
 {
   /* Mouse highlight may be displayed again.  */
-  FRAME_X_DISPLAY_INFO (f)->mouse_face_defer = 0;
+  MOUSE_HL_INFO (f)->mouse_face_defer = 0;
 
 #ifndef XFlush
   BLOCK_INPUT;
@@ -658,17 +654,17 @@ XTframe_up_to_date (struct frame *f)
 {
   if (FRAME_X_P (f))
     {
-      struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
+      Mouse_HLInfo *hlinfo = MOUSE_HL_INFO (f);
 
-      if (dpyinfo->mouse_face_deferred_gc
-	  || f == dpyinfo->mouse_face_mouse_frame)
+      if (hlinfo->mouse_face_deferred_gc
+	  || f == hlinfo->mouse_face_mouse_frame)
 	{
 	  BLOCK_INPUT;
-	  if (dpyinfo->mouse_face_mouse_frame)
-	    note_mouse_highlight (dpyinfo->mouse_face_mouse_frame,
-				  dpyinfo->mouse_face_mouse_x,
-				  dpyinfo->mouse_face_mouse_y);
-	  dpyinfo->mouse_face_deferred_gc = 0;
+	  if (hlinfo->mouse_face_mouse_frame)
+	    note_mouse_highlight (hlinfo->mouse_face_mouse_frame,
+				  hlinfo->mouse_face_mouse_x,
+				  hlinfo->mouse_face_mouse_y);
+	  hlinfo->mouse_face_deferred_gc = 0;
 	  UNBLOCK_INPUT;
 	}
     }
@@ -902,6 +898,7 @@ static void x_draw_relief_rect (struct frame *, int, int, int, int,
                                 XRectangle *);
 static void x_draw_box_rect (struct glyph_string *, int, int, int, int,
                              int, int, int, XRectangle *);
+static void x_scroll_bar_clear (struct frame *);
 
 #if GLYPH_DEBUG
 static void x_check_font (struct frame *, struct font *);
@@ -969,7 +966,7 @@ x_set_mouse_face_gc (struct glyph_string *s)
   struct face *face;
 
   /* What face has to be used last for the mouse face?  */
-  face_id = FRAME_X_DISPLAY_INFO (s->f)->mouse_face_face_id;
+  face_id = MOUSE_HL_INFO (s->f)->mouse_face_face_id;
   face = FACE_FROM_ID (s->f, face_id);
   if (face == NULL)
     face = FACE_FROM_ID (s->f, MOUSE_FACE_ID);
@@ -1328,6 +1325,83 @@ x_draw_composite_glyph_string_foreground (struct glyph_string *s)
     }
 }
 
+
+/* Draw the foreground of glyph string S for glyphless characters.  */
+
+static void
+x_draw_glyphless_glyph_string_foreground (struct glyph_string *s)
+{
+  struct glyph *glyph = s->first_glyph;
+  XChar2b char2b[8];
+  int x, i, j;
+
+  /* If first glyph of S has a left box line, start drawing the text
+     of S to the right of that box line.  */
+  if (s->face && s->face->box != FACE_NO_BOX
+      && s->first_glyph->left_box_line_p)
+    x = s->x + eabs (s->face->box_line_width);
+  else
+    x = s->x;
+
+  s->char2b = char2b;
+
+  for (i = 0; i < s->nchars; i++, glyph++)
+    {
+      char buf[7], *str = NULL;
+      int len = glyph->u.glyphless.len;
+
+      if (glyph->u.glyphless.method == GLYPHLESS_DISPLAY_ACRONYM)
+	{
+	  if (len > 0
+	      && CHAR_TABLE_P (Vglyphless_char_display)
+	      && (CHAR_TABLE_EXTRA_SLOTS (XCHAR_TABLE (Vglyphless_char_display))
+		  >= 1))
+	    {
+	      Lisp_Object acronym
+		= (! glyph->u.glyphless.for_no_font
+		   ? CHAR_TABLE_REF (Vglyphless_char_display,
+				     glyph->u.glyphless.ch)
+		   : XCHAR_TABLE (Vglyphless_char_display)->extras[0]);
+	      if (STRINGP (acronym))
+		str = SSDATA (acronym);
+	    }
+	}
+      else if (glyph->u.glyphless.method == GLYPHLESS_DISPLAY_HEX_CODE)
+	{
+	  sprintf ((char *) buf, "%0*X",
+		   glyph->u.glyphless.ch < 0x10000 ? 4 : 6,
+		   glyph->u.glyphless.ch);
+	  str = buf;
+	}
+
+      if (str)
+	{
+	  int upper_len = (len + 1) / 2;
+	  unsigned code;
+
+	  /* It is assured that all LEN characters in STR is ASCII.  */
+	  for (j = 0; j < len; j++)
+	    {
+	      code = s->font->driver->encode_char (s->font, str[j]);
+	      STORE_XCHAR2B (char2b + j, code >> 8, code & 0xFF);
+	    }
+	  s->font->driver->draw (s, 0, upper_len,
+				 x + glyph->slice.glyphless.upper_xoff,
+				 s->ybase + glyph->slice.glyphless.upper_yoff,
+				 0);
+	  s->font->driver->draw (s, upper_len, len,
+				 x + glyph->slice.glyphless.lower_xoff,
+				 s->ybase + glyph->slice.glyphless.lower_yoff,
+				 0);
+	}
+      if (glyph->u.glyphless.method != GLYPHLESS_DISPLAY_THIN_SPACE)
+	XDrawRectangle (s->display, s->window, s->gc,
+			x, s->ybase - glyph->ascent,
+			glyph->pixel_width - 1,
+			glyph->ascent + glyph->descent - 1);
+      x += glyph->pixel_width;
+   }
+}
 
 #ifdef USE_X_TOOLKIT
 
@@ -1942,18 +2016,38 @@ x_draw_relief_rect (struct frame *f,
     gc = f->output_data.x->black_relief.gc;
   XSetClipRectangles (dpy, gc, 0, 0, clip_rect, 1, Unsorted);
 
+  /* This code is more complicated than it has to be, because of two
+     minor hacks to make the boxes look nicer: (i) if width > 1, draw
+     the outermost line using the black relief.  (ii) Omit the four
+     corner pixels.  */
+
   /* Top.  */
   if (top_p)
-    for (i = 0; i < width; ++i)
-      XDrawLine (dpy, window, gc,
-		 left_x + i * left_p, top_y + i,
-		 right_x + 1 - i * right_p, top_y + i);
+    {
+      if (width == 1)
+	XDrawLine (dpy, window, gc,
+		   left_x  + (left_p  ? 1 : 0), top_y,
+		   right_x + (right_p ? 0 : 1), top_y);
+
+      for (i = 1; i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   left_x  + i * left_p, top_y + i,
+		   right_x + 1 - i * right_p, top_y + i);
+    }
 
   /* Left.  */
   if (left_p)
-    for (i = 0; i < width; ++i)
-      XDrawLine (dpy, window, gc,
-		 left_x + i, top_y + i, left_x + i, bottom_y - i + 1);
+    {
+      if (width == 1)
+	XDrawLine (dpy, window, gc, left_x, top_y + 1, left_x, bottom_y);
+
+      XClearArea (dpy, window, left_x, top_y, 1, 1, False);
+      XClearArea (dpy, window, left_x, bottom_y, 1, 1, False);
+
+      for (i = (width > 1 ? 1 : 0); i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   left_x + i, top_y + i, left_x + i, bottom_y - i + 1);
+    }
 
   XSetClipMask (dpy, gc, None);
   if (raised_p)
@@ -1962,18 +2056,40 @@ x_draw_relief_rect (struct frame *f,
     gc = f->output_data.x->white_relief.gc;
   XSetClipRectangles (dpy, gc, 0, 0, clip_rect, 1, Unsorted);
 
+  if (width > 1)
+    {
+      /* Outermost top line.  */
+      if (top_p)
+	XDrawLine (dpy, window, gc,
+		   left_x  + (left_p  ? 1 : 0), top_y,
+		   right_x + (right_p ? 0 : 1), top_y);
+
+      /* Outermost left line.  */
+      if (left_p)
+	XDrawLine (dpy, window, gc, left_x, top_y + 1, left_x, bottom_y);
+    }
+
   /* Bottom.  */
   if (bot_p)
-    for (i = 0; i < width; ++i)
+    {
       XDrawLine (dpy, window, gc,
-		 left_x + i * left_p, bottom_y - i,
-		 right_x + 1 - i * right_p, bottom_y - i);
+		 left_x  + (left_p  ? 1 : 0), bottom_y,
+		 right_x + (right_p ? 0 : 1), bottom_y);
+      for (i = 1; i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   left_x  + i * left_p, bottom_y - i,
+		   right_x + 1 - i * right_p, bottom_y - i);
+    }
 
   /* Right.  */
   if (right_p)
-    for (i = 0; i < width; ++i)
-      XDrawLine (dpy, window, gc,
-		 right_x - i, top_y + i + 1, right_x - i, bottom_y - i);
+    {
+      XClearArea (dpy, window, right_x, top_y, 1, 1, False);
+      XClearArea (dpy, window, right_x, bottom_y, 1, 1, False);
+      for (i = 0; i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   right_x - i, top_y + i + 1, right_x - i, bottom_y - i);
+    }
 
   XSetClipMask (dpy, gc, None);
 }
@@ -2611,6 +2727,14 @@ x_draw_glyph_string (struct glyph_string *s)
       else
 	x_draw_glyph_string_background (s, 1);
       x_draw_composite_glyph_string_foreground (s);
+      break;
+
+    case GLYPHLESS_GLYPH:
+      if (s->for_overlaps)
+	s->background_filled_p = 1;
+      else
+	x_draw_glyph_string_background (s, 1);
+      x_draw_glyphless_glyph_string_foreground (s);
       break;
 
     default:
@@ -4004,7 +4128,7 @@ xt_action_hook (Widget widget, XtPointer client_data, String action_name,
 		XEvent *event, String *params, Cardinal *num_params)
 {
   int scroll_bar_p;
-  char *end_action;
+  const char *end_action;
 
 #ifdef USE_MOTIF
   scroll_bar_p = XmIsScrollBar (widget);
@@ -5489,7 +5613,7 @@ x_scroll_bar_report_motion (FRAME_PTR *fp, Lisp_Object *bar_window, enum scroll_
    Clear out the scroll bars, and ask for expose events, so we can
    redraw them.  */
 
-void
+static void
 x_scroll_bar_clear (FRAME_PTR f)
 {
 #ifndef USE_TOOLKIT_SCROLL_BARS
@@ -5639,6 +5763,10 @@ event_handler_gdk (GdkXEvent *gxev, GdkEvent *ev, gpointer data)
 #endif /* USE_GTK */
 
 
+static void xembed_send_message (struct frame *f, Time time,
+                                 enum xembed_message message,
+                                 long detail, long data1, long data2);
+
 /* Handles the XEvent EVENT on display DPYINFO.
 
    *FINISH is X_EVENT_GOTO_OUT if caller should stop reading events.
@@ -5660,6 +5788,7 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
   struct frame *f = NULL;
   struct coding_system coding;
   XEvent event = *eventp;
+  Mouse_HLInfo *hlinfo = &dpyinfo->mouse_highlight;
 
   *finish = X_EVENT_NORMAL;
 
@@ -6109,12 +6238,12 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
 
       /* If mouse-highlight is an integer, input clears out
 	 mouse highlighting.  */
-      if (!dpyinfo->mouse_face_hidden && INTEGERP (Vmouse_highlight)
+      if (!hlinfo->mouse_face_hidden && INTEGERP (Vmouse_highlight)
 	  && (f == 0
-	      || !EQ (f->tool_bar_window, dpyinfo->mouse_face_window)))
+	      || !EQ (f->tool_bar_window, hlinfo->mouse_face_window)))
         {
-          clear_mouse_face (dpyinfo);
-          dpyinfo->mouse_face_hidden = 1;
+          clear_mouse_face (hlinfo);
+          hlinfo->mouse_face_hidden = 1;
         }
 
 #if defined USE_MOTIF && defined USE_TOOLKIT_SCROLL_BARS
@@ -6372,7 +6501,6 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
 	      {
 		/* Decode the input data.  */
 		int require;
-		unsigned char *p;
 
 		/* The input should be decoded with `coding_system'
 		   which depends on which X*LookupString function
@@ -6471,12 +6599,12 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
       f = x_top_window_to_frame (dpyinfo, event.xcrossing.window);
       if (f)
         {
-          if (f == dpyinfo->mouse_face_mouse_frame)
+          if (f == hlinfo->mouse_face_mouse_frame)
             {
               /* If we move outside the frame, then we're
                  certainly no longer on any text in the frame.  */
-              clear_mouse_face (dpyinfo);
-              dpyinfo->mouse_face_mouse_frame = 0;
+              clear_mouse_face (hlinfo);
+              hlinfo->mouse_face_mouse_frame = 0;
             }
 
           /* Generate a nil HELP_EVENT to cancel a help-echo.
@@ -6509,10 +6637,10 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
         else
           f = x_window_to_frame (dpyinfo, event.xmotion.window);
 
-        if (dpyinfo->mouse_face_hidden)
+        if (hlinfo->mouse_face_hidden)
           {
-            dpyinfo->mouse_face_hidden = 0;
-            clear_mouse_face (dpyinfo);
+            hlinfo->mouse_face_hidden = 0;
+            clear_mouse_face (hlinfo);
           }
 
 #ifdef USE_GTK
@@ -6530,7 +6658,7 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
 
                 window = window_from_coordinates (f,
                                                   event.xmotion.x, event.xmotion.y,
-                                                  0, 0, 0, 0);
+                                                  0, 0);
 
                 /* Window will be selected only when it is not selected now and
                    last mouse movement event was not in it.  Minibuffer window
@@ -6567,7 +6695,7 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
 
             /* If we move outside the frame, then we're
                certainly no longer on any text in the frame.  */
-            clear_mouse_face (dpyinfo);
+            clear_mouse_face (hlinfo);
           }
 
         /* If the contents of the global variable help_echo_string
@@ -6669,7 +6797,7 @@ handle_one_xevent (struct x_display_info *dpyinfo, XEvent *eventp, int *finish, 
                 int x = event.xbutton.x;
                 int y = event.xbutton.y;
 
-                window = window_from_coordinates (f, x, y, 0, 0, 0, 1);
+                window = window_from_coordinates (f, x, y, 0, 1);
                 tool_bar_p = EQ (window, f->tool_bar_window);
 
                 if (tool_bar_p && event.xbutton.button < 4)
@@ -6907,23 +7035,6 @@ XTread_socket (struct terminal *terminal, int expected, struct input_event *hold
   input_signal_count++;
 
   ++handling_signal;
-
-#ifdef HAVE_X_SM
-  /* Only check session manager input for the primary display. */
-  if (terminal->id == 1 && x_session_have_connection ())
-    {
-      struct input_event inev;
-      BLOCK_INPUT;
-      /* We don't need to EVENT_INIT (inev) here, as
-         x_session_check_input copies an entire input_event.  */
-      if (x_session_check_input (&inev))
-        {
-          kbd_buffer_store_event_hold (&inev, hold_quit);
-          count++;
-        }
-      UNBLOCK_INPUT;
-    }
-#endif
 
   /* For debugging, this gives a way to fake an I/O error.  */
   if (terminal->display_info.x == XTread_socket_fake_io_error)
@@ -7583,12 +7694,6 @@ x_connection_closed (Display *dpy, const char *error_message)
   strcpy (error_msg, error_message);
   handling_signal = 0;
 
-  /* Prevent being called recursively because of an error condition
-     below.  Otherwise, we might end up with printing ``can't find per
-     display information'' in the recursive call instead of printing
-     the original message here.  */
-  x_catch_errors (dpy);
-
   /* Inhibit redisplay while frames are being deleted. */
   specbind (Qinhibit_redisplay, Qt);
 
@@ -7627,44 +7732,26 @@ x_connection_closed (Display *dpy, const char *error_message)
 	delete_frame (frame, Qnoelisp);
       }
 
-  /* We have to close the display to inform Xt that it doesn't
-     exist anymore.  If we don't, Xt will continue to wait for
-     events from the display.  As a consequence, a sequence of
-
-     M-x make-frame-on-display RET :1 RET
-     ...kill the new frame, so that we get an IO error...
-     M-x make-frame-on-display RET :1 RET
-
-     will indefinitely wait in Xt for events for display `:1', opened
-     in the first call to make-frame-on-display.
-
-     Closing the display is reported to lead to a bus error on
-     OpenWindows in certain situations.  I suspect that is a bug
-     in OpenWindows.  I don't know how to circumvent it here.  */
-
+  /* If DPYINFO is null, this means we didn't open the display in the
+     first place, so don't try to close it.  */
   if (dpyinfo)
     {
-#ifdef USE_X_TOOLKIT
-      /* If DPYINFO is null, this means we didn't open the display
-	 in the first place, so don't try to close it.  */
-      {
-	fatal_error_signal_hook = x_fatal_error_signal;
-	XtCloseDisplay (dpy);
-	fatal_error_signal_hook = NULL;
-      }
-#endif
-
+      /* We can not call XtCloseDisplay here because it calls XSync.
+         XSync inside the error handler apparently hangs Emacs.  On
+         current Xt versions, this isn't needed either.  */
 #ifdef USE_GTK
-      /* Due to bugs in some Gtk+ versions, just exit here if this
-         is the last display/terminal. */
-      if (terminal_list->next_terminal == NULL)
-        {
-          fprintf (stderr, "%s\n", error_msg);
-          Fkill_emacs (make_number (70));
-          /* NOTREACHED */
-        }
-      xg_display_close (dpyinfo->display);
-#endif
+      /* A long-standing GTK bug prevents proper disconnect handling
+	 (https://bugzilla.gnome.org/show_bug.cgi?id=85715).  Once,
+	 the resulting Glib error message loop filled a user's disk.
+	 To avoid this, kill Emacs unconditionally on disconnect.  */
+      shut_down_emacs (0, 0, Qnil);
+      fprintf (stderr, "%s\n\
+When compiled with GTK, Emacs cannot recover from X disconnects.\n\
+This is a GTK bug: https://bugzilla.gnome.org/show_bug.cgi?id=85715\n\
+For details, see etc/PROBLEMS.\n",
+	       error_msg);
+      abort ();
+#endif /* USE_GTK */
 
       /* Indicate that this display is dead.  */
       dpyinfo->display = 0;
@@ -7681,8 +7768,6 @@ x_connection_closed (Display *dpy, const char *error_message)
 	Fdelete_terminal (tmp, Qnoelisp);
       }
     }
-
-  x_uncatch_errors ();
 
   if (terminal_list == 0)
     {
@@ -7728,18 +7813,6 @@ x_error_handler (Display *display, XErrorEvent *error)
    If that was the only one, it prints an error message and kills Emacs.  */
 
 /* .gdbinit puts a breakpoint here, so make sure it is not inlined.  */
-
-#if __GNUC__ >= 3  /* On GCC 3.0 we might get a warning.  */
-#define NO_INLINE __attribute__((noinline))
-#else
-#define NO_INLINE
-#endif
-
-/* Some versions of GNU/Linux define noinline in their headers.  */
-
-#ifdef noinline
-#undef noinline
-#endif
 
 /* On older GCC versions, just putting x_error_quitter
    after x_error_handler prevents inlining into the former.  */
@@ -7834,7 +7907,7 @@ x_new_font (struct frame *f, Lisp_Object font_object, int fontset)
       && (FRAME_XIC_STYLE (f) & (XIMPreeditPosition | XIMStatusArea)))
     {
       BLOCK_INPUT;
-      xic_set_xfontset (f, SDATA (fontset_ascii (fontset)));
+      xic_set_xfontset (f, SSDATA (fontset_ascii (fontset)));
       UNBLOCK_INPUT;
     }
 #endif
@@ -8169,12 +8242,11 @@ x_set_offset (struct frame *f, register int xoff, register int yoff, int change_
    http://freedesktop.org/wiki/Specifications/wm-spec.  */
 
 static int
-wm_supports (struct frame *f, const char *atomname)
+wm_supports (struct frame *f, Atom want_atom)
 {
   Atom actual_type;
   unsigned long actual_size, bytes_remaining;
   int i, rc, actual_format;
-  Atom prop_atom;
   Window wmcheck_window;
   struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
   Window target_window = dpyinfo->root_window;
@@ -8182,15 +8254,13 @@ wm_supports (struct frame *f, const char *atomname)
   Display *dpy = FRAME_X_DISPLAY (f);
   unsigned char *tmp_data = NULL;
   Atom target_type = XA_WINDOW;
-  Atom want_atom;
 
   BLOCK_INPUT;
 
-  prop_atom = XInternAtom (dpy, "_NET_SUPPORTING_WM_CHECK", False);
-
   x_catch_errors (dpy);
   rc = XGetWindowProperty (dpy, target_window,
-                           prop_atom, 0, max_len, False, target_type,
+                           dpyinfo->Xatom_net_supporting_wm_check,
+                           0, max_len, False, target_type,
                            &actual_type, &actual_format, &actual_size,
                            &bytes_remaining, &tmp_data);
 
@@ -8225,10 +8295,10 @@ wm_supports (struct frame *f, const char *atomname)
       dpyinfo->net_supported_window = 0;
 
       target_type = XA_ATOM;
-      prop_atom = XInternAtom (dpy, "_NET_SUPPORTED", False);
       tmp_data = NULL;
       rc = XGetWindowProperty (dpy, target_window,
-                               prop_atom, 0, max_len, False, target_type,
+                               dpyinfo->Xatom_net_supported,
+                               0, max_len, False, target_type,
                                &actual_type, &actual_format, &actual_size,
                                &bytes_remaining, &tmp_data);
 
@@ -8246,7 +8316,6 @@ wm_supports (struct frame *f, const char *atomname)
     }
 
   rc = 0;
-  want_atom = XInternAtom (dpy, atomname, False);
 
   for (i = 0; rc == 0 && i < dpyinfo->nr_net_supported_atoms; ++i)
     rc = dpyinfo->net_supported_atoms[i] == want_atom;
@@ -8258,31 +8327,99 @@ wm_supports (struct frame *f, const char *atomname)
 }
 
 static void
-set_wm_state (Lisp_Object frame, int add, const char *what, const char *what2)
+set_wm_state (Lisp_Object frame, int add, Atom atom, Atom value)
 {
-  const char *atom = "_NET_WM_STATE";
-  Fx_send_client_event (frame, make_number (0), frame,
-                        make_unibyte_string (atom, strlen (atom)),
-                        make_number (32),
-                        /* 1 = add, 0 = remove */
+  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (XFRAME (frame));
+
+  x_send_client_event (frame, make_number (0), frame,
+                       dpyinfo->Xatom_net_wm_state,
+                       make_number (32),
+                       /* 1 = add, 0 = remove */
+                       Fcons
+                       (make_number (add ? 1 : 0),
                         Fcons
-                        (make_number (add ? 1 : 0),
-                         Fcons
-                         (make_unibyte_string (what, strlen (what)),
-                          what2 != 0
-                          ? Fcons (make_unibyte_string (what2, strlen (what2)),
-                                   Qnil)
-                          : Qnil)));
+                        (make_fixnum_or_float (atom),
+                         value != 0
+                         ? Fcons (make_fixnum_or_float (value), Qnil)
+                         : Qnil)));
 }
 
 void
 x_set_sticky (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 {
   Lisp_Object frame;
+  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
 
   XSETFRAME (frame, f);
+
   set_wm_state (frame, NILP (new_value) ? 0 : 1,
-                "_NET_WM_STATE_STICKY", NULL);
+                dpyinfo->Xatom_net_wm_state_sticky, None);
+}
+
+/* Return the current _NET_WM_STATE.
+   SIZE_STATE is set to one of the FULLSCREEN_* values.
+   STICKY is set to 1 if the sticky state is set, 0 if not.  */
+
+static void
+get_current_wm_state (struct frame *f,
+                      Window window,
+                      int *size_state,
+                      int *sticky)
+{
+  Atom actual_type;
+  unsigned long actual_size, bytes_remaining;
+  int i, rc, actual_format;
+  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
+  long max_len = 65536;
+  Display *dpy = FRAME_X_DISPLAY (f);
+  unsigned char *tmp_data = NULL;
+  Atom target_type = XA_ATOM;
+
+  *sticky = 0;
+  *size_state = FULLSCREEN_NONE;
+
+  BLOCK_INPUT;
+  x_catch_errors (dpy);
+  rc = XGetWindowProperty (dpy, window, dpyinfo->Xatom_net_wm_state,
+                           0, max_len, False, target_type,
+                           &actual_type, &actual_format, &actual_size,
+                           &bytes_remaining, &tmp_data);
+
+  if (rc != Success || actual_type != target_type || x_had_errors_p (dpy))
+    {
+      if (tmp_data) XFree (tmp_data);
+      x_uncatch_errors ();
+      UNBLOCK_INPUT;
+      return;
+    }
+
+  x_uncatch_errors ();
+
+  for (i = 0; i < actual_size; ++i)
+    {
+      Atom a = ((Atom*)tmp_data)[i];
+      if (a == dpyinfo->Xatom_net_wm_state_maximized_horz)
+        {
+          if (*size_state == FULLSCREEN_HEIGHT)
+            *size_state = FULLSCREEN_MAXIMIZED;
+          else
+            *size_state = FULLSCREEN_WIDTH;
+        }
+      else if (a == dpyinfo->Xatom_net_wm_state_maximized_vert)
+        {
+          if (*size_state == FULLSCREEN_WIDTH)
+            *size_state = FULLSCREEN_MAXIMIZED;
+          else
+            *size_state = FULLSCREEN_HEIGHT;
+        }
+      else if (a == dpyinfo->Xatom_net_wm_state_fullscreen)
+        *size_state = FULLSCREEN_BOTH;
+      else if (a == dpyinfo->Xatom_net_wm_state_sticky)
+        *sticky = 1;
+    }
+
+  if (tmp_data) XFree (tmp_data);
+  UNBLOCK_INPUT;
 }
 
 /* Do fullscreen as specified in extended window manager hints */
@@ -8290,42 +8427,63 @@ x_set_sticky (struct frame *f, Lisp_Object new_value, Lisp_Object old_value)
 static int
 do_ewmh_fullscreen (struct frame *f)
 {
-  int have_net_atom = wm_supports (f, "_NET_WM_STATE");
+  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
+  int have_net_atom = wm_supports (f, dpyinfo->Xatom_net_wm_state);
+  int cur, dummy;
+
+  get_current_wm_state (f, FRAME_OUTER_WINDOW (f), &cur, &dummy);
 
   /* Some window managers don't say they support _NET_WM_STATE, but they do say
      they support _NET_WM_STATE_FULLSCREEN.  Try that also.  */
   if (!have_net_atom)
-      have_net_atom = wm_supports (f, "_NET_WM_STATE_FULLSCREEN");
+    have_net_atom = wm_supports (f, dpyinfo->Xatom_net_wm_state_fullscreen);
 
-  if (have_net_atom)
+  if (have_net_atom && cur != f->want_fullscreen)
     {
       Lisp_Object frame;
-      const char *fs = "_NET_WM_STATE_FULLSCREEN";
-      const char *fw = "_NET_WM_STATE_MAXIMIZED_HORZ";
-      const char *fh = "_NET_WM_STATE_MAXIMIZED_VERT";
 
       XSETFRAME (frame, f);
 
-      set_wm_state (frame, 0, fs, NULL);
-      set_wm_state (frame, 0, fh, NULL);
-      set_wm_state (frame, 0, fw, NULL);
-
-      /* If there are _NET_ atoms we assume we have extended window manager
-         hints.  */
+      /* Keep number of calls to set_wm_state as low as possible.
+         Some window managers, or possible Gtk+, hangs when too many
+         are sent at once.  */
       switch (f->want_fullscreen)
         {
         case FULLSCREEN_BOTH:
-          set_wm_state (frame, 1, fs, NULL);
+          if (cur == FULLSCREEN_WIDTH || cur == FULLSCREEN_MAXIMIZED
+              || cur == FULLSCREEN_HEIGHT)
+            set_wm_state (frame, 0, dpyinfo->Xatom_net_wm_state_maximized_horz,
+                          dpyinfo->Xatom_net_wm_state_maximized_vert);
+          set_wm_state (frame, 1, dpyinfo->Xatom_net_wm_state_fullscreen, None);
           break;
         case FULLSCREEN_WIDTH:
-          set_wm_state (frame, 1, fw, NULL);
+          if (cur == FULLSCREEN_BOTH || cur == FULLSCREEN_HEIGHT
+              || cur == FULLSCREEN_MAXIMIZED)
+            set_wm_state (frame, 0, dpyinfo->Xatom_net_wm_state_fullscreen,
+                          dpyinfo->Xatom_net_wm_state_maximized_vert);
+          if (cur != FULLSCREEN_MAXIMIZED)
+            set_wm_state (frame, 1, dpyinfo->Xatom_net_wm_state_maximized_horz, None);
           break;
         case FULLSCREEN_HEIGHT:
-          set_wm_state (frame, 1, fh, NULL);
+          if (cur == FULLSCREEN_BOTH || cur == FULLSCREEN_WIDTH
+              || cur == FULLSCREEN_MAXIMIZED)
+            set_wm_state (frame, 0, dpyinfo->Xatom_net_wm_state_fullscreen,
+                          dpyinfo->Xatom_net_wm_state_maximized_horz);
+          if (cur != FULLSCREEN_MAXIMIZED)
+            set_wm_state (frame, 1, dpyinfo->Xatom_net_wm_state_maximized_vert, None);
           break;
         case FULLSCREEN_MAXIMIZED:
-          set_wm_state (frame, 1, fw, fh);
+          if (cur == FULLSCREEN_BOTH)
+            set_wm_state (frame, 0, dpyinfo->Xatom_net_wm_state_fullscreen, None);
+          set_wm_state (frame, 1, dpyinfo->Xatom_net_wm_state_maximized_horz,
+                        dpyinfo->Xatom_net_wm_state_maximized_vert);
           break;
+        case FULLSCREEN_NONE:
+          if (cur == FULLSCREEN_BOTH)
+            set_wm_state (frame, 0, dpyinfo->Xatom_net_wm_state_fullscreen, None);
+          else
+            set_wm_state (frame, 0, dpyinfo->Xatom_net_wm_state_maximized_horz,
+                          dpyinfo->Xatom_net_wm_state_maximized_vert);
         }
 
       f->want_fullscreen = FULLSCREEN_NONE;
@@ -8351,57 +8509,11 @@ XTfullscreen_hook (FRAME_PTR f)
 static void
 x_handle_net_wm_state (struct frame *f, XPropertyEvent *event)
 {
-  Atom actual_type;
-  unsigned long actual_size, bytes_remaining;
-  int i, rc, actual_format, value = FULLSCREEN_NONE;
-  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
-  long max_len = 65536;
-  Display *dpy = FRAME_X_DISPLAY (f);
-  unsigned char *tmp_data = NULL;
-  Atom target_type = XA_ATOM;
+  int value = FULLSCREEN_NONE;
   Lisp_Object lval;
   int sticky = 0;
 
-  BLOCK_INPUT;
-  x_catch_errors (dpy);
-  rc = XGetWindowProperty (dpy, event->window,
-                           event->atom, 0, max_len, False, target_type,
-                           &actual_type, &actual_format, &actual_size,
-                           &bytes_remaining, &tmp_data);
-
-  if (rc != Success || actual_type != target_type || x_had_errors_p (dpy))
-    {
-      if (tmp_data) XFree (tmp_data);
-      x_uncatch_errors ();
-      UNBLOCK_INPUT;
-      return;
-    }
-
-  x_uncatch_errors ();
-
-  for (i = 0; i < actual_size; ++i)
-    {
-      Atom a = ((Atom*)tmp_data)[i];
-      if (a == dpyinfo->Xatom_net_wm_state_maximized_horz)
-        {
-          if (value == FULLSCREEN_HEIGHT)
-            value = FULLSCREEN_MAXIMIZED;
-          else
-            value = FULLSCREEN_WIDTH;
-        }
-      else if (a == dpyinfo->Xatom_net_wm_state_maximized_vert)
-        {
-          if (value == FULLSCREEN_WIDTH)
-            value = FULLSCREEN_MAXIMIZED;
-          else
-            value = FULLSCREEN_HEIGHT;
-        }
-      else if (a == dpyinfo->Xatom_net_wm_state_fullscreen_atom)
-        value = FULLSCREEN_BOTH;
-      else if (a == dpyinfo->Xatom_net_wm_state_sticky)
-        sticky = 1;
-    }
-
+  get_current_wm_state (f, event->window, &value, &sticky);
   lval = Qnil;
   switch (value)
     {
@@ -8421,9 +8533,6 @@ x_handle_net_wm_state (struct frame *f, XPropertyEvent *event)
 
   store_frame_param (f, Qfullscreen, lval);
   store_frame_param (f, Qsticky, sticky ? Qt : Qnil);
-
-  if (tmp_data) XFree (tmp_data);
-  UNBLOCK_INPUT;
 }
 
 /* Check if we need to resize the frame due to a fullscreen request.
@@ -8437,9 +8546,13 @@ x_check_fullscreen (struct frame *f)
   if (f->output_data.x->parent_desc != FRAME_X_DISPLAY_INFO (f)->root_window)
     return; /* Only fullscreen without WM or with EWM hints (above). */
 
+  /* Setting fullscreen to nil doesn't do anything.  We could save the
+     last non-fullscreen size and restore it, but it seems like a
+     lot of work for this unusual case (no window manager running).  */
+
   if (f->want_fullscreen != FULLSCREEN_NONE)
     {
-      int width = FRAME_COLS (f), height = FRAME_LINES (f);
+      int width = FRAME_PIXEL_WIDTH (f), height = FRAME_PIXEL_HEIGHT (f);
       struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
 
       switch (f->want_fullscreen)
@@ -8457,12 +8570,8 @@ x_check_fullscreen (struct frame *f)
           height = x_display_pixel_height (dpyinfo);
         }
 
-      if (FRAME_COLS (f) != width || FRAME_LINES (f) != height)
-        {
-          change_frame_size (f, height, width, 0, 1, 0);
-          SET_FRAME_GARBAGED (f);
-          cancel_mouse_face (f);
-        }
+      XResizeWindow (FRAME_X_DISPLAY (f), FRAME_OUTER_WINDOW (f),
+                     width, height);
     }
 }
 
@@ -8814,17 +8923,17 @@ x_ewmh_activate_frame (FRAME_PTR f)
   /* See Window Manager Specification/Extended Window Manager Hints at
      http://freedesktop.org/wiki/Specifications/wm-spec  */
 
-  const char *atom = "_NET_ACTIVE_WINDOW";
-  if (f->async_visible && wm_supports (f, atom))
+  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
+  if (f->async_visible && wm_supports (f, dpyinfo->Xatom_net_active_window))
     {
       Lisp_Object frame;
       XSETFRAME (frame, f);
-      Fx_send_client_event (frame, make_number (0), frame,
-                            make_unibyte_string (atom, strlen (atom)),
-                            make_number (32),
-                            Fcons (make_number (1),
-                                   Fcons (make_number (last_user_time),
-                                          Qnil)));
+      x_send_client_event (frame, make_number (0), frame,
+                           dpyinfo->Xatom_net_active_window,
+                           make_number (32),
+                           Fcons (make_number (1),
+                                  Fcons (make_number (last_user_time),
+                                         Qnil)));
     }
 }
 
@@ -8839,22 +8948,21 @@ XTframe_raise_lower (FRAME_PTR f, int raise_flag)
 
 /* XEmbed implementation.  */
 
-void
+static void
 xembed_set_info (struct frame *f, enum xembed_info flags)
 {
-  Atom atom;
   unsigned long data[2];
-
-  atom = XInternAtom (FRAME_X_DISPLAY (f), "_XEMBED_INFO", False);
+  struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
 
   data[0] = XEMBED_VERSION;
   data[1] = flags;
 
-  XChangeProperty (FRAME_X_DISPLAY (f), FRAME_OUTER_WINDOW (f), atom, atom,
+  XChangeProperty (FRAME_X_DISPLAY (f), FRAME_OUTER_WINDOW (f),
+                   dpyinfo->Xatom_XEMBED_INFO, dpyinfo->Xatom_XEMBED_INFO,
 		   32, PropModeReplace, (unsigned char *) data, 2);
 }
 
-void
+static void
 xembed_send_message (struct frame *f, Time time, enum xembed_message message, long int detail, long int data1, long int data2)
 {
   XEvent event;
@@ -9234,6 +9342,7 @@ x_free_frame_resources (struct frame *f)
   struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
   Lisp_Object bar;
   struct scroll_bar *b;
+  Mouse_HLInfo *hlinfo = &dpyinfo->mouse_highlight;
 
   BLOCK_INPUT;
 
@@ -9327,15 +9436,15 @@ x_free_frame_resources (struct frame *f)
   if (f == dpyinfo->x_highlight_frame)
     dpyinfo->x_highlight_frame = 0;
 
-  if (f == dpyinfo->mouse_face_mouse_frame)
+  if (f == hlinfo->mouse_face_mouse_frame)
     {
-      dpyinfo->mouse_face_beg_row
-	= dpyinfo->mouse_face_beg_col = -1;
-      dpyinfo->mouse_face_end_row
-	= dpyinfo->mouse_face_end_col = -1;
-      dpyinfo->mouse_face_window = Qnil;
-      dpyinfo->mouse_face_deferred_gc = 0;
-      dpyinfo->mouse_face_mouse_frame = 0;
+      hlinfo->mouse_face_beg_row
+	= hlinfo->mouse_face_beg_col = -1;
+      hlinfo->mouse_face_end_row
+	= hlinfo->mouse_face_end_col = -1;
+      hlinfo->mouse_face_window = Qnil;
+      hlinfo->mouse_face_deferred_gc = 0;
+      hlinfo->mouse_face_mouse_frame = 0;
     }
 
   UNBLOCK_INPUT;
@@ -9599,10 +9708,6 @@ static int x_timeout_atimer_activated_flag;
 
 static int x_initialized;
 
-#ifdef HAVE_X_SM
-static int x_session_initialized;
-#endif
-
 /* Test whether two display-name strings agree up to the dot that separates
    the screen number from the server number.  */
 static int
@@ -9712,6 +9817,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
   struct terminal *terminal;
   struct x_display_info *dpyinfo;
   XrmDatabase xrdb;
+  Mouse_HLInfo *hlinfo;
 
   BLOCK_INPUT;
 
@@ -9721,7 +9827,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
       ++x_initialized;
     }
 
-  if (! x_display_ok (SDATA (display_name)))
+  if (! x_display_ok (SSDATA (display_name)))
     error ("Display %s can't be opened", SDATA (display_name));
 
 #ifdef USE_GTK
@@ -9740,7 +9846,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
       {
         static char display_opt[] = "--display";
         static char name_opt[] = "--name";
-        
+
         for (argc = 0; argc < NUM_ARGV; ++argc)
           argv[argc] = 0;
 
@@ -9813,7 +9919,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 	argv[argc++] = xrm_option;
       }
     turn_on_atimers (0);
-    dpy = XtOpenDisplay (Xt_app_con, SDATA (display_name),
+    dpy = XtOpenDisplay (Xt_app_con, SSDATA (display_name),
 			 resource_name, EMACS_CLASS,
 			 emacs_options, XtNumber (emacs_options),
 			 &argc, argv);
@@ -9842,6 +9948,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 
   dpyinfo = (struct x_display_info *) xmalloc (sizeof (struct x_display_info));
   memset (dpyinfo, 0, sizeof *dpyinfo);
+  hlinfo = &dpyinfo->mouse_highlight;
 
   terminal = x_create_terminal (dpyinfo);
 
@@ -9851,8 +9958,8 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 
     for (share = x_display_list, tail = x_display_name_list; share;
 	 share = share->next, tail = XCDR (tail))
-      if (same_x_server (SDATA (XCAR (XCAR (tail))),
-			 SDATA (display_name)))
+      if (same_x_server (SSDATA (XCAR (XCAR (tail))),
+			 SSDATA (display_name)))
 	break;
     if (share)
       terminal->kboard = share->terminal->kboard;
@@ -9913,7 +10020,7 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 
   /* Set the name of the terminal. */
   terminal->name = (char *) xmalloc (SBYTES (display_name) + 1);
-  strncpy (terminal->name, SDATA (display_name), SBYTES (display_name));
+  strncpy (terminal->name, SSDATA (display_name), SBYTES (display_name));
   terminal->name[SBYTES (display_name)] = 0;
 
 #if 0
@@ -9964,16 +10071,16 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
   dpyinfo->bitmaps_size = 0;
   dpyinfo->bitmaps_last = 0;
   dpyinfo->scratch_cursor_gc = 0;
-  dpyinfo->mouse_face_mouse_frame = 0;
-  dpyinfo->mouse_face_deferred_gc = 0;
-  dpyinfo->mouse_face_beg_row = dpyinfo->mouse_face_beg_col = -1;
-  dpyinfo->mouse_face_end_row = dpyinfo->mouse_face_end_col = -1;
-  dpyinfo->mouse_face_face_id = DEFAULT_FACE_ID;
-  dpyinfo->mouse_face_window = Qnil;
-  dpyinfo->mouse_face_overlay = Qnil;
-  dpyinfo->mouse_face_mouse_x = dpyinfo->mouse_face_mouse_y = 0;
-  dpyinfo->mouse_face_defer = 0;
-  dpyinfo->mouse_face_hidden = 0;
+  hlinfo->mouse_face_mouse_frame = 0;
+  hlinfo->mouse_face_deferred_gc = 0;
+  hlinfo->mouse_face_beg_row = hlinfo->mouse_face_beg_col = -1;
+  hlinfo->mouse_face_end_row = hlinfo->mouse_face_end_col = -1;
+  hlinfo->mouse_face_face_id = DEFAULT_FACE_ID;
+  hlinfo->mouse_face_window = Qnil;
+  hlinfo->mouse_face_overlay = Qnil;
+  hlinfo->mouse_face_mouse_x = hlinfo->mouse_face_mouse_y = 0;
+  hlinfo->mouse_face_defer = 0;
+  hlinfo->mouse_face_hidden = 0;
   dpyinfo->x_focus_frame = 0;
   dpyinfo->x_focus_event_frame = 0;
   dpyinfo->x_highlight_frame = 0;
@@ -10004,8 +10111,8 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 					  build_string ("PrivateColormap"),
 					  Qnil, Qnil);
 	  if (STRINGP (value)
-	      && (!strcmp (SDATA (value), "true")
-		  || !strcmp (SDATA (value), "on")))
+	      && (!strcmp (SSDATA (value), "true")
+		  || !strcmp (SSDATA (value), "on")))
 	    dpyinfo->cmap = XCopyColormapAndFree (dpyinfo->display, dpyinfo->cmap);
 	}
     }
@@ -10041,90 +10148,97 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
       dpyinfo->resx = (mm < 1) ? 100 : pixels * 25.4 / mm;
     }
 
-  dpyinfo->Xatom_wm_protocols
-    = XInternAtom (dpyinfo->display, "WM_PROTOCOLS", False);
-  dpyinfo->Xatom_wm_take_focus
-    = XInternAtom (dpyinfo->display, "WM_TAKE_FOCUS", False);
-  dpyinfo->Xatom_wm_save_yourself
-    = XInternAtom (dpyinfo->display, "WM_SAVE_YOURSELF", False);
-  dpyinfo->Xatom_wm_delete_window
-    = XInternAtom (dpyinfo->display, "WM_DELETE_WINDOW", False);
-  dpyinfo->Xatom_wm_change_state
-    = XInternAtom (dpyinfo->display, "WM_CHANGE_STATE", False);
-  dpyinfo->Xatom_wm_configure_denied
-    = XInternAtom (dpyinfo->display, "WM_CONFIGURE_DENIED", False);
-  dpyinfo->Xatom_wm_window_moved
-    = XInternAtom (dpyinfo->display, "WM_MOVED", False);
-  dpyinfo->Xatom_wm_client_leader
-    = XInternAtom (dpyinfo->display, "WM_CLIENT_LEADER", False);
-  dpyinfo->Xatom_editres
-    = XInternAtom (dpyinfo->display, "Editres", False);
-  dpyinfo->Xatom_CLIPBOARD
-    = XInternAtom (dpyinfo->display, "CLIPBOARD", False);
-  dpyinfo->Xatom_TIMESTAMP
-    = XInternAtom (dpyinfo->display, "TIMESTAMP", False);
-  dpyinfo->Xatom_TEXT
-    = XInternAtom (dpyinfo->display, "TEXT", False);
-  dpyinfo->Xatom_COMPOUND_TEXT
-    = XInternAtom (dpyinfo->display, "COMPOUND_TEXT", False);
-  dpyinfo->Xatom_UTF8_STRING
-    = XInternAtom (dpyinfo->display, "UTF8_STRING", False);
-  dpyinfo->Xatom_DELETE
-    = XInternAtom (dpyinfo->display, "DELETE", False);
-  dpyinfo->Xatom_MULTIPLE
-    = XInternAtom (dpyinfo->display, "MULTIPLE", False);
-  dpyinfo->Xatom_INCR
-    = XInternAtom (dpyinfo->display, "INCR", False);
-  dpyinfo->Xatom_EMACS_TMP
-    = XInternAtom (dpyinfo->display, "_EMACS_TMP_", False);
-  dpyinfo->Xatom_TARGETS
-    = XInternAtom (dpyinfo->display, "TARGETS", False);
-  dpyinfo->Xatom_NULL
-    = XInternAtom (dpyinfo->display, "NULL", False);
-  dpyinfo->Xatom_ATOM_PAIR
-    = XInternAtom (dpyinfo->display, "ATOM_PAIR", False);
-  /* For properties of font.  */
-  dpyinfo->Xatom_PIXEL_SIZE
-    = XInternAtom (dpyinfo->display, "PIXEL_SIZE", False);
-  dpyinfo->Xatom_AVERAGE_WIDTH
-    = XInternAtom (dpyinfo->display, "AVERAGE_WIDTH", False);
-  dpyinfo->Xatom_MULE_BASELINE_OFFSET
-    = XInternAtom (dpyinfo->display, "_MULE_BASELINE_OFFSET", False);
-  dpyinfo->Xatom_MULE_RELATIVE_COMPOSE
-    = XInternAtom (dpyinfo->display, "_MULE_RELATIVE_COMPOSE", False);
-  dpyinfo->Xatom_MULE_DEFAULT_ASCENT
-    = XInternAtom (dpyinfo->display, "_MULE_DEFAULT_ASCENT", False);
+  {
+    const struct
+    {
+      const char *name;
+      Atom *atom;
+    } atom_refs[] = {
+      { "WM_PROTOCOLS", &dpyinfo->Xatom_wm_protocols  },
+      { "WM_TAKE_FOCUS", &dpyinfo->Xatom_wm_take_focus },
+      { "WM_SAVE_YOURSELF", &dpyinfo->Xatom_wm_save_yourself },
+      { "WM_DELETE_WINDOW", &dpyinfo->Xatom_wm_delete_window },
+      { "WM_CHANGE_STATE", &dpyinfo->Xatom_wm_change_state },
+      { "WM_CONFIGURE_DENIED", &dpyinfo->Xatom_wm_configure_denied },
+      { "WM_MOVED", &dpyinfo->Xatom_wm_window_moved },
+      { "WM_CLIENT_LEADER", &dpyinfo->Xatom_wm_client_leader },
+      { "Editres", &dpyinfo->Xatom_editres },
+      { "CLIPBOARD", &dpyinfo->Xatom_CLIPBOARD },
+      { "TIMESTAMP", &dpyinfo->Xatom_TIMESTAMP },
+      { "TEXT", &dpyinfo->Xatom_TEXT },
+      { "COMPOUND_TEXT", &dpyinfo->Xatom_COMPOUND_TEXT },
+      { "UTF8_STRING", &dpyinfo->Xatom_UTF8_STRING },
+      { "DELETE", &dpyinfo->Xatom_DELETE },
+      { "MULTIPLE", &dpyinfo->Xatom_MULTIPLE },
+      { "INCR", &dpyinfo->Xatom_INCR },
+      { "_EMACS_TMP_",  &dpyinfo->Xatom_EMACS_TMP },
+      { "TARGETS", &dpyinfo->Xatom_TARGETS },
+      { "NULL", &dpyinfo->Xatom_NULL },
+      { "ATOM_PAIR", &dpyinfo->Xatom_ATOM_PAIR },
+      { "_XEMBED_INFO", &dpyinfo->Xatom_XEMBED_INFO },
+      /* For properties of font.  */
+      { "PIXEL_SIZE", &dpyinfo->Xatom_PIXEL_SIZE },
+      { "AVERAGE_WIDTH", &dpyinfo->Xatom_AVERAGE_WIDTH },
+      { "_MULE_BASELINE_OFFSET", &dpyinfo->Xatom_MULE_BASELINE_OFFSET },
+      { "_MULE_RELATIVE_COMPOSE", &dpyinfo->Xatom_MULE_RELATIVE_COMPOSE },
+      { "_MULE_DEFAULT_ASCENT", &dpyinfo->Xatom_MULE_DEFAULT_ASCENT },
+      /* Ghostscript support.  */
+      { "DONE", &dpyinfo->Xatom_DONE },
+      { "PAGE", &dpyinfo->Xatom_PAGE },
+      { "SCROLLBAR", &dpyinfo->Xatom_Scrollbar },
+      { "_XEMBED", &dpyinfo->Xatom_XEMBED },
+      /* EWMH */
+      { "_NET_WM_STATE", &dpyinfo->Xatom_net_wm_state },
+      { "_NET_WM_STATE_FULLSCREEN", &dpyinfo->Xatom_net_wm_state_fullscreen },
+      { "_NET_WM_STATE_MAXIMIZED_HORZ",
+        &dpyinfo->Xatom_net_wm_state_maximized_horz },
+      { "_NET_WM_STATE_MAXIMIZED_VERT",
+        &dpyinfo->Xatom_net_wm_state_maximized_vert },
+      { "_NET_WM_STATE_STICKY", &dpyinfo->Xatom_net_wm_state_sticky },
+      { "_NET_WM_WINDOW_TYPE", &dpyinfo->Xatom_net_window_type },
+      { "_NET_WM_WINDOW_TYPE_TOOLTIP",
+        &dpyinfo->Xatom_net_window_type_tooltip },
+      { "_NET_WM_ICON_NAME", &dpyinfo->Xatom_net_wm_icon_name },
+      { "_NET_WM_NAME", &dpyinfo->Xatom_net_wm_name },
+      { "_NET_SUPPORTED",  &dpyinfo->Xatom_net_supported },
+      { "_NET_SUPPORTING_WM_CHECK", &dpyinfo->Xatom_net_supporting_wm_check },
+      { "_NET_WM_WINDOW_OPACITY", &dpyinfo->Xatom_net_wm_window_opacity },
+      { "_NET_ACTIVE_WINDOW", &dpyinfo->Xatom_net_active_window },
+      { "_NET_FRAME_EXTENTS", &dpyinfo->Xatom_net_frame_extents },
+      /* Session management */
+      { "SM_CLIENT_ID", &dpyinfo->Xatom_SM_CLIENT_ID },
+      { "_XSETTINGS_SETTINGS", &dpyinfo->Xatom_xsettings_prop },
+      { "MANAGER", &dpyinfo->Xatom_xsettings_mgr },
+    };
 
-  /* Ghostscript support.  */
-  dpyinfo->Xatom_PAGE = XInternAtom (dpyinfo->display, "PAGE", False);
-  dpyinfo->Xatom_DONE = XInternAtom (dpyinfo->display, "DONE", False);
+    int i;
+    const int atom_count = sizeof (atom_refs) / sizeof (atom_refs[0]);
+    /* 1 for _XSETTINGS_SN  */
+    const int total_atom_count = 1 + atom_count;
+    Atom *atoms_return = xmalloc (sizeof (Atom) * total_atom_count);
+    char **atom_names = xmalloc (sizeof (char *) * total_atom_count);
+    char xsettings_atom_name[64];
 
-  dpyinfo->Xatom_Scrollbar = XInternAtom (dpyinfo->display, "SCROLLBAR",
-					  False);
+    for (i = 0; i < atom_count; i++)
+      atom_names[i] = (char *) atom_refs[i].name;
 
-  dpyinfo->Xatom_XEMBED = XInternAtom (dpyinfo->display, "_XEMBED",
-				       False);
+    /* Build _XSETTINGS_SN atom name */
+    snprintf (xsettings_atom_name, sizeof (xsettings_atom_name),
+              "_XSETTINGS_S%d", XScreenNumberOfScreen (dpyinfo->screen));
+    atom_names[i] = xsettings_atom_name;
 
-  dpyinfo->Xatom_net_wm_state
-    = XInternAtom (dpyinfo->display, "_NET_WM_STATE", False);
-  dpyinfo->Xatom_net_wm_state_fullscreen_atom
-    = XInternAtom (dpyinfo->display, "_NET_WM_STATE_FULLSCREEN", False);
-  dpyinfo->Xatom_net_wm_state_maximized_horz
-    = XInternAtom (dpyinfo->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-  dpyinfo->Xatom_net_wm_state_maximized_vert
-    = XInternAtom (dpyinfo->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-  dpyinfo->Xatom_net_wm_state_sticky
-    = XInternAtom (dpyinfo->display, "_NET_WM_STATE_STICKY", False);
-  dpyinfo->Xatom_net_window_type
-    = XInternAtom (dpyinfo->display, "_NET_WM_WINDOW_TYPE", False);
-  dpyinfo->Xatom_net_window_type_tooltip
-    = XInternAtom (dpyinfo->display, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
-  dpyinfo->Xatom_net_wm_icon_name
-    = XInternAtom (dpyinfo->display, "_NET_WM_ICON_NAME", False);
-  dpyinfo->Xatom_net_wm_name
-    = XInternAtom (dpyinfo->display, "_NET_WM_NAME", False);
+    XInternAtoms (dpyinfo->display, atom_names, total_atom_count,
+                  False, atoms_return);
 
-  dpyinfo->cut_buffers_initialized = 0;
+    for (i = 0; i < atom_count; i++)
+      *atom_refs[i].atom = atoms_return[i];
+
+    /* Manual copy of last atom */
+    dpyinfo->Xatom_xsettings_sel = atoms_return[i];
+
+    xfree (atom_names);
+    xfree (atoms_return);
+  }
 
   dpyinfo->x_dnd_atoms_size = 8;
   dpyinfo->x_dnd_atoms_length = 0;
@@ -10195,8 +10309,8 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 				    build_string ("Synchronous"),
 				    Qnil, Qnil);
     if (STRINGP (value)
-	&& (!strcmp (SDATA (value), "true")
-	    || !strcmp (SDATA (value), "on")))
+	&& (!strcmp (SSDATA (value), "true")
+	    || !strcmp (SSDATA (value), "on")))
       XSynchronize (dpyinfo->display, True);
   }
 
@@ -10208,13 +10322,13 @@ x_term_init (Lisp_Object display_name, char *xrm_option, char *resource_name)
 				    Qnil, Qnil);
 #ifdef USE_XIM
     if (STRINGP (value)
-	&& (!strcmp (SDATA (value), "false")
-	    || !strcmp (SDATA (value), "off")))
+	&& (!strcmp (SSDATA (value), "false")
+	    || !strcmp (SSDATA (value), "off")))
       use_xim = 0;
 #else
     if (STRINGP (value)
-	&& (!strcmp (SDATA (value), "true")
-	    || !strcmp (SDATA (value), "on")))
+	&& (!strcmp (SSDATA (value), "true")
+	    || !strcmp (SSDATA (value), "on")))
       use_xim = 1;
 #endif
   }
@@ -10512,9 +10626,6 @@ x_initialize (void)
   last_tool_bar_item = -1;
   any_help_event_p = 0;
   ignore_next_mouse_click_timeout = 0;
-#ifdef HAVE_X_SM
-  x_session_initialized = 0;
-#endif
 
 #ifdef USE_GTK
   current_count = -1;
@@ -10590,7 +10701,7 @@ syms_of_xterm (void)
 #endif
 
   DEFVAR_BOOL ("x-use-underline-position-properties",
-	       &x_use_underline_position_properties,
+	       x_use_underline_position_properties,
      doc: /* *Non-nil means make use of UNDERLINE_POSITION font properties.
 A value of nil means ignore them.  If you encounter fonts with bogus
 UNDERLINE_POSITION font properties, for example 7x13 on XFree prior
@@ -10600,7 +10711,7 @@ sizes.  */);
   x_use_underline_position_properties = 1;
 
   DEFVAR_BOOL ("x-underline-at-descent-line",
-	       &x_underline_at_descent_line,
+	       x_underline_at_descent_line,
      doc: /* *Non-nil means to draw the underline at the same place as the descent line.
 A value of nil means to draw the underline according to the value of the
 variable `x-use-underline-position-properties', which is usually at the
@@ -10608,7 +10719,7 @@ baseline level.  The default value is nil.  */);
   x_underline_at_descent_line = 0;
 
   DEFVAR_BOOL ("x-mouse-click-focus-ignore-position",
-	       &x_mouse_click_focus_ignore_position,
+	       x_mouse_click_focus_ignore_position,
     doc: /* Non-nil means that a mouse click to focus a frame does not move point.
 This variable is only used when the window manager requires that you
 click on a frame to select it (give it focus).  In that case, a value
@@ -10617,10 +10728,12 @@ reflect the mouse click position, while a non-nil value means that the
 selected window or cursor position is preserved.  */);
   x_mouse_click_focus_ignore_position = 0;
 
-  DEFVAR_LISP ("x-toolkit-scroll-bars", &Vx_toolkit_scroll_bars,
-    doc: /* What X toolkit scroll bars Emacs uses.
-A value of nil means Emacs doesn't use X toolkit scroll bars.
-Otherwise, value is a symbol describing the X toolkit.  */);
+  DEFVAR_LISP ("x-toolkit-scroll-bars", Vx_toolkit_scroll_bars,
+    doc: /* Which toolkit scroll bars Emacs uses, if any.
+A value of nil means Emacs doesn't use toolkit scroll bars.
+With the X Window system, the value is a symbol describing the
+X toolkit.  Possible values are: gtk, motif, xaw, or xaw3d.
+With MS Windows, the value is t.  */);
 #ifdef USE_TOOLKIT_SCROLL_BARS
 #ifdef USE_MOTIF
   Vx_toolkit_scroll_bars = intern_c_string ("motif");
@@ -10648,35 +10761,35 @@ Otherwise, value is a symbol describing the X toolkit.  */);
   Qsuper = intern_c_string ("super");
   Fput (Qsuper, Qmodifier_value, make_number (super_modifier));
 
-  DEFVAR_LISP ("x-alt-keysym", &Vx_alt_keysym,
+  DEFVAR_LISP ("x-alt-keysym", Vx_alt_keysym,
     doc: /* Which keys Emacs uses for the alt modifier.
 This should be one of the symbols `alt', `hyper', `meta', `super'.
 For example, `alt' means use the Alt_L and Alt_R keysyms.  The default
 is nil, which is the same as `alt'.  */);
   Vx_alt_keysym = Qnil;
 
-  DEFVAR_LISP ("x-hyper-keysym", &Vx_hyper_keysym,
+  DEFVAR_LISP ("x-hyper-keysym", Vx_hyper_keysym,
     doc: /* Which keys Emacs uses for the hyper modifier.
 This should be one of the symbols `alt', `hyper', `meta', `super'.
 For example, `hyper' means use the Hyper_L and Hyper_R keysyms.  The
 default is nil, which is the same as `hyper'.  */);
   Vx_hyper_keysym = Qnil;
 
-  DEFVAR_LISP ("x-meta-keysym", &Vx_meta_keysym,
+  DEFVAR_LISP ("x-meta-keysym", Vx_meta_keysym,
     doc: /* Which keys Emacs uses for the meta modifier.
 This should be one of the symbols `alt', `hyper', `meta', `super'.
 For example, `meta' means use the Meta_L and Meta_R keysyms.  The
 default is nil, which is the same as `meta'.  */);
   Vx_meta_keysym = Qnil;
 
-  DEFVAR_LISP ("x-super-keysym", &Vx_super_keysym,
+  DEFVAR_LISP ("x-super-keysym", Vx_super_keysym,
     doc: /* Which keys Emacs uses for the super modifier.
 This should be one of the symbols `alt', `hyper', `meta', `super'.
 For example, `super' means use the Super_L and Super_R keysyms.  The
 default is nil, which is the same as `super'.  */);
   Vx_super_keysym = Qnil;
 
-  DEFVAR_LISP ("x-keysym-table", &Vx_keysym_table,
+  DEFVAR_LISP ("x-keysym-table", Vx_keysym_table,
     doc: /* Hash table of character codes indexed by X keysym codes.  */);
   Vx_keysym_table = make_hash_table (Qeql, make_number (900),
 				     make_float (DEFAULT_REHASH_SIZE),
@@ -10685,6 +10798,3 @@ default is nil, which is the same as `super'.  */);
 }
 
 #endif /* HAVE_X_WINDOWS */
-
-/* arch-tag: 6d4e4cb7-abc1-4302-9585-d84dcfb09d0f
-   (do not change this comment) */

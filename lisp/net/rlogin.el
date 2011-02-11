@@ -1,7 +1,7 @@
 ;;; rlogin.el --- remote login interface
 
-;; Copyright (C) 1992, 1993, 1994, 1995, 1997, 1998, 2001, 2002, 2003,
-;;   2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1992-1995, 1997-1998, 2001-2011
+;;   Free Software Foundation, Inc.
 
 ;; Author: Noah Friedman
 ;; Maintainer: Noah Friedman <friedman@splode.com>
@@ -45,17 +45,17 @@
   :group 'unix)
 
 (defcustom rlogin-program "rlogin"
-  "*Name of program to invoke rlogin"
+  "Name of program to invoke rlogin"
   :type 'string
   :group 'rlogin)
 
 (defcustom rlogin-explicit-args nil
-  "*List of arguments to pass to rlogin on the command line."
+  "List of arguments to pass to rlogin on the command line."
   :type '(repeat (string :tag "Argument"))
   :group 'rlogin)
 
 (defcustom rlogin-mode-hook nil
-  "*Hooks to run after setting current buffer to rlogin-mode."
+  "Hooks to run after setting current buffer to rlogin-mode."
   :type 'hook
   :group 'rlogin)
 
@@ -68,7 +68,7 @@
                 (string-match "-solaris2" system-configuration))
            t)
           (t nil)))
-  "*If non-nil, use a pty for the local rlogin process.
+  "If non-nil, use a pty for the local rlogin process.
 If nil, use a pipe (if pipes are supported on the local system).
 
 Generally it is better not to waste ptys on systems which have a static
@@ -79,7 +79,7 @@ a pty is being used, and errors will result from using a pipe instead."
   :group 'rlogin)
 
 (defcustom rlogin-directory-tracking-mode 'local
-  "*Control whether and how to do directory tracking in an rlogin buffer.
+  "Control whether and how to do directory tracking in an rlogin buffer.
 
 nil means don't do directory tracking.
 
@@ -103,12 +103,12 @@ re-synching of directories."
 (make-variable-buffer-local 'rlogin-directory-tracking-mode)
 
 (defcustom rlogin-host nil
-  "*The name of the remote host.  This variable is buffer-local."
+  "The name of the remote host.  This variable is buffer-local."
   :type '(choice (const nil) string)
   :group 'rlogin)
 
 (defcustom rlogin-remote-user nil
-  "*The username used on the remote host.
+  "The username used on the remote host.
 This variable is buffer-local and defaults to your local user name.
 If rlogin is invoked with the `-l' option to specify the remote username,
 this variable is set from that."
@@ -318,5 +318,4 @@ Delete ARG characters forward, or send a C-d to process if at end of buffer."
 
 (provide 'rlogin)
 
-;; arch-tag: 6e20eabf-feda-40fa-ab40-0d156db447e4
 ;;; rlogin.el ends here

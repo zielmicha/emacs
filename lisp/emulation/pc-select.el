@@ -2,8 +2,7 @@
 ;;;		     (or MAC GUI or MS-windoze (bah)) look-and-feel
 ;;;		     including key bindings.
 
-;; Copyright (C) 1995, 1996, 1997, 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1995-1997, 2000-2011 Free Software Foundation, Inc.
 
 ;; Author: Michael Staats <michael@thp.Uni-Duisburg.DE>
 ;; Keywords: convenience emulations
@@ -85,7 +84,7 @@
   :group 'emulations)
 
 (defcustom pc-select-override-scroll-error t
-  "*Non-nil means don't generate error on scrolling past edge of buffer.
+  "Non-nil means don't generate error on scrolling past edge of buffer.
 This variable applies in PC Selection mode only.
 The scroll commands normally generate an error if you try to scroll
 past the top or bottom of the buffer.  This is annoying when selecting
@@ -98,14 +97,14 @@ errors are suppressed."
                                 "24.1")
 
 (defcustom pc-select-selection-keys-only nil
-  "*Non-nil means only bind the basic selection keys when started.
+  "Non-nil means only bind the basic selection keys when started.
 Other keys that emulate pc-behavior will be untouched.
 This gives mostly Emacs-like behavior with only the selection keys enabled."
   :type 'boolean
   :group 'pc-select)
 
 (defcustom pc-select-meta-moves-sexps nil
-  "*Non-nil means move sexp-wise with Meta key, otherwise move word-wise."
+  "Non-nil means move sexp-wise with Meta key, otherwise move word-wise."
   :type 'boolean
   :group 'pc-select)
 
@@ -983,5 +982,4 @@ but before calling PC Selection mode):
       (setq pc-select-key-bindings-alist nil
 	    pc-select-saved-settings-alist nil))))
 
-;; arch-tag: 10697b70-ae07-4f3e-ad23-7814a3f418c2
 ;;; pc-select.el ends here

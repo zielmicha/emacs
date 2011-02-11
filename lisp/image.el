@@ -1,10 +1,10 @@
 ;;; image.el --- image API
 
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-;;   2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1998-2011  Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: multimedia
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -329,14 +329,16 @@ Optional DATA-P non-nil means SOURCE is a string containing image data."
   type)
 
 
-(defvar image-library-alist)
+(define-obsolete-variable-alias
+    'image-library-alist
+    'dynamic-library-alist "24.1")
 
 ;;;###autoload
 (defun image-type-available-p (type)
   "Return non-nil if image type TYPE is available.
 Image types are symbols like `xbm' or `jpeg'."
   (and (fboundp 'init-image-library)
-       (init-image-library type image-library-alist)))
+       (init-image-library type dynamic-library-alist)))
 
 
 ;;;###autoload
@@ -696,26 +698,30 @@ shall be displayed."
 
 (defcustom imagemagick-types-inhibit
   '(C HTML HTM TXT PDF)
-  "Types the imagemagick loader should not try to handle.")
+  ;; FIXME what are the possible options?
+  ;; Are these actually file-name extensions?
+  ;; Why are these upper-case when eg image-types is lower-case?
+  "Types the ImageMagick loader should not try to handle."
+  :type '(choice (const :tag "Let ImageMagick handle all the types it can" nil)
+		 (repeat symbol))
+  :version "24.1"
+  :group 'image)
 
 ;;;###autoload
 (defun imagemagick-register-types ()
-  "Register file types that imagemagick is able to handle."
+  "Register the file types that ImageMagick is able to handle."
   (let ((im-types (imagemagick-types)))
     (dolist (im-inhibit imagemagick-types-inhibit)
       (setq im-types (remove im-inhibit im-types)))
     (dolist (im-type im-types)
       (let ((extension (downcase (symbol-name im-type))))
 	(push
-	 (cons  (concat "\\." extension "\\'") 'image-mode)
+	 (cons (concat "\\." extension "\\'") 'image-mode)
 	 auto-mode-alist)
 	(push
-	 (cons  (concat "\\." extension "\\'") 'imagemagick)
+	 (cons (concat "\\." extension "\\'") 'imagemagick)
 	 image-type-file-name-regexps)))))
-
-
 
 (provide 'image)
 
-;; arch-tag: 8e76a07b-eb48-4f3e-a7a0-1a7ba9f096b3
 ;;; image.el ends here

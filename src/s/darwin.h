@@ -1,7 +1,6 @@
 /* System description header file for Darwin (Mac OS X).
 
-Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-  2010  Free Software Foundation, Inc.
+Copyright (C) 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -63,15 +62,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
   if system supports pty's.  'a' means it is /dev/ptya0  */
 #define FIRST_PTY_LETTER 'p'
 
-/* Define HAVE_TERMIOS if the system provides POSIX-style
-   functions and macros for terminal control.
-
-   Define HAVE_TERMIO if the system provides sysV-style ioctls
-   for terminal control.
-
-   Do not define both.  HAVE_TERMIOS is preferred, if it is supported
-   on your system. */
-#define HAVE_TERMIOS
 #define NO_TERMIO
 
 /* Define HAVE_PTYS if the system supports pty devices.
@@ -159,5 +149,3 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 /* Use the GC_MAKE_GCPROS_NOOPS (see lisp.h) method for marking the stack.  */
 #define GC_MARK_STACK   GC_MAKE_GCPROS_NOOPS
 
-/* arch-tag: 481d443d-4f89-43ea-b5fb-49706d95fa41
-   (do not change this comment) */

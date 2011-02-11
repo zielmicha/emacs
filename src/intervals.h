@@ -1,6 +1,5 @@
 /* Definitions and global variables for intervals.
-   Copyright (C) 1993, 1994, 2000, 2001, 2002, 2003, 2004,
-                 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1993-1994, 2000-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -250,39 +249,40 @@ extern INTERVAL make_interval (void);
 extern INTERVAL create_root_interval (Lisp_Object);
 extern void copy_properties (INTERVAL, INTERVAL);
 extern int intervals_equal (INTERVAL, INTERVAL);
-extern void traverse_intervals (INTERVAL, int,
+extern void traverse_intervals (INTERVAL, EMACS_INT,
                                 void (*) (INTERVAL, Lisp_Object),
                                 Lisp_Object);
 extern void traverse_intervals_noorder (INTERVAL,
                                         void (*) (INTERVAL, Lisp_Object),
                                         Lisp_Object);
-extern INTERVAL split_interval_right (INTERVAL, int);
-extern INTERVAL split_interval_left (INTERVAL, int);
-extern INTERVAL find_interval (INTERVAL, int);
+extern INTERVAL split_interval_right (INTERVAL, EMACS_INT);
+extern INTERVAL split_interval_left (INTERVAL, EMACS_INT);
+extern INTERVAL find_interval (INTERVAL, EMACS_INT);
 extern INTERVAL next_interval (INTERVAL);
 extern INTERVAL previous_interval (INTERVAL);
 extern INTERVAL merge_interval_left (INTERVAL);
 extern INTERVAL merge_interval_right (INTERVAL);
 extern void delete_interval (INTERVAL);
-extern INLINE void offset_intervals (struct buffer *, int, int);
-extern void graft_intervals_into_buffer (INTERVAL, int, int,
+extern void offset_intervals (struct buffer *, EMACS_INT, EMACS_INT);
+extern void graft_intervals_into_buffer (INTERVAL, EMACS_INT, EMACS_INT,
                                          struct buffer *, int);
 extern void verify_interval_modification (struct buffer *, int, int);
 extern INTERVAL balance_intervals (INTERVAL);
-extern INLINE void copy_intervals_to_string (Lisp_Object, struct buffer *,
-                                             int, int);
-extern INTERVAL copy_intervals (INTERVAL, int, int);
+extern void copy_intervals_to_string (Lisp_Object, struct buffer *,
+                                             EMACS_INT, EMACS_INT);
+extern INTERVAL copy_intervals (INTERVAL, EMACS_INT, EMACS_INT);
 extern int compare_string_intervals (Lisp_Object, Lisp_Object);
 extern Lisp_Object textget (Lisp_Object, Lisp_Object);
 extern Lisp_Object lookup_char_property (Lisp_Object, Lisp_Object, int);
-extern void move_if_not_intangible (int);
-extern int get_property_and_range (int, Lisp_Object, Lisp_Object *,
+extern void move_if_not_intangible (EMACS_INT);
+extern int get_property_and_range (EMACS_INT, Lisp_Object, Lisp_Object *,
                                    EMACS_INT *, EMACS_INT *, Lisp_Object);
-extern Lisp_Object get_local_map (int, struct buffer *, Lisp_Object);
-extern INTERVAL update_interval (INTERVAL, int);
+extern Lisp_Object get_local_map (EMACS_INT, struct buffer *, Lisp_Object);
+extern INTERVAL update_interval (INTERVAL, EMACS_INT);
 extern void set_intervals_multibyte (int);
 extern INTERVAL validate_interval_range (Lisp_Object, Lisp_Object *,
                                          Lisp_Object *, int);
+extern INTERVAL interval_of (int, Lisp_Object);
 
 /* Defined in xdisp.c */
 extern int invisible_p (Lisp_Object, Lisp_Object);
@@ -303,16 +303,10 @@ extern Lisp_Object Qkeymap;
 extern Lisp_Object Qforeground, Qbackground, Qfont, Qunderline, Qstipple;
 extern Lisp_Object Qinvisible, Qintangible, Qread_only;
 
-extern Lisp_Object Vinhibit_point_motion_hooks;
-extern Lisp_Object Vdefault_text_properties;
-extern Lisp_Object Vchar_property_alias_alist;
-extern Lisp_Object Vtext_property_default_nonsticky;
-
 /* Sticky properties */
 extern Lisp_Object Qfront_sticky, Qrear_nonsticky;
 
 EXFUN (Fget_char_property, 3);
-EXFUN (Fget_char_property_and_overlay, 3);
 EXFUN (Fget_text_property, 3);
 EXFUN (Ftext_properties_at, 2);
 EXFUN (Fnext_property_change, 3);
@@ -321,7 +315,6 @@ EXFUN (Fadd_text_properties, 4);
 EXFUN (Fset_text_properties, 4);
 EXFUN (Fremove_text_properties, 4);
 EXFUN (Ftext_property_any, 5);
-EXFUN (Ftext_property_not_all, 5);
 EXFUN (Fprevious_single_char_property_change, 4);
 extern Lisp_Object copy_text_properties (Lisp_Object, Lisp_Object,
                                          Lisp_Object, Lisp_Object,
@@ -347,5 +340,3 @@ extern void syms_of_textprop (void);
 
 #include "composite.h"
 
-/* arch-tag: f0bc16c0-b084-498d-9de4-21cc8f077795
-   (do not change this comment) */

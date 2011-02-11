@@ -1,8 +1,8 @@
 ;;; proced.el --- operate on system processes like dired
 
-;; Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2011 Free Software Foundation, Inc.
 
-;; Author: Roland Winkler <Roland.Winkler@physik.uni-erlangen.de>
+;; Author: Roland Winkler <winkler@gnu.org>
 ;; Keywords: Processes, Unix
 
 ;; This file is part of GNU Emacs.
@@ -1880,5 +1880,4 @@ Killed processes cannot be recovered by Emacs."))
 
 (provide 'proced)
 
-;; arch-tag: a6e312ad-9032-45aa-972d-31a8cfc545af
 ;;; proced.el ends here

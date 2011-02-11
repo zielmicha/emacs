@@ -1,6 +1,6 @@
 ;;; gnus-sync.el --- synchronization facility for Gnus
 
-;; Copyright (C) 2010  Free Software Foundation, Inc.
+;; Copyright (C) 2010-2011  Free Software Foundation, Inc.
 
 ;; Author: Ted Zlatanov <tzz@lifelogs.com>
 ;; Keywords: news synchronization nntp nnrss
@@ -24,6 +24,10 @@
 
 ;; This is the gnus-sync.el package.
 
+;; It's due for a rewrite using gnus-after-set-mark-hook and
+;; gnus-before-update-mark-hook.  Until then please consider it
+;; experimental.
+
 ;; Put this in your startup file (~/.gnus.el for instance)
 
 ;; possibilities for gnus-sync-backend:
@@ -39,6 +43,9 @@
 ;; TODO:
 
 ;; - after gnus-sync-read, the message counts are wrong
+
+;; - use gnus-after-set-mark-hook and gnus-before-update-mark-hook to
+;;   catch the mark updates
 
 ;;; Code:
 

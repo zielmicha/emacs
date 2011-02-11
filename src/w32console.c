@@ -1,6 +1,5 @@
 /* Terminal hooks for GNU Emacs on the Microsoft W32 API.
-   Copyright (C) 1992, 1999, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-                 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1992, 1999, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -25,10 +24,8 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <config.h>
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <windows.h>
-#include <string.h>
 #include <setjmp.h>
 
 #include "lisp.h"
@@ -74,13 +71,6 @@ static DWORD	prev_console_mode;
 static CONSOLE_CURSOR_INFO prev_console_cursor;
 #endif
 
-extern Lisp_Object Vtty_defined_color_alist;
-
-/* Determine whether to make frame dimensions match the screen buffer,
-   or the current window size.  The former is desirable when running
-   over telnet, while the latter is more useful when working directly at
-   the console with a large scroll-back buffer.  */
-int w32_use_full_screen_buffer;
 HANDLE  keyboard_handle;
 
 
@@ -585,28 +575,6 @@ w32_face_attributes (struct frame *f, int face_id)
   return char_attr;
 }
 
-
-
-/* Given a color index, return its standard name.  */
-Lisp_Object
-vga_stdcolor_name (int idx)
-{
-  /* Standard VGA colors, in the order of their standard numbering
-     in the default VGA palette.  */
-  static char *vga_colors[16] = {
-    "black", "blue", "green", "cyan", "red", "magenta", "brown",
-    "lightgray", "darkgray", "lightblue", "lightgreen", "lightcyan",
-    "lightred", "lightmagenta", "yellow", "white"
-  };
-
-  extern Lisp_Object Qunspecified;
-
-  if (idx >= 0 && idx < sizeof (vga_colors) / sizeof (vga_colors[0]))
-    return build_string (vga_colors[idx]);
-  else
-    return Qunspecified;	/* meaning the default */
-}
-
 void
 initialize_w32_display (struct terminal *term)
 {
@@ -771,7 +739,7 @@ void
 syms_of_ntterm (void)
 {
   DEFVAR_BOOL ("w32-use-full-screen-buffer",
-               &w32_use_full_screen_buffer,
+               w32_use_full_screen_buffer,
 	       doc: /* Non-nil means make terminal frames use the full screen buffer dimensions.
 This is desirable when running Emacs over telnet.
 A value of nil means use the current console window dimensions; this
@@ -784,5 +752,3 @@ scroll-back buffer.  */);
   defsubr (&Sset_message_beep);
 }
 
-/* arch-tag: a390a07f-f661-42bc-aeb4-e6d8bf860337
-   (do not change this comment) */

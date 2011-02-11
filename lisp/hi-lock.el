@@ -1,7 +1,6 @@
 ;;; hi-lock.el --- minor mode for interactive automatic highlighting
 
-;; Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-;;   2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2000-2011 Free Software Foundation, Inc.
 
 ;; Author: David M. Koppelman <koppel@ece.lsu.edu>
 ;; Keywords: faces, minor-mode, matching, display
@@ -88,8 +87,7 @@
 
 ;;; Code:
 
-(eval-and-compile
-  (require 'font-lock))
+(require 'font-lock)
 
 (defgroup hi-lock nil
   "Interactively add and remove font-lock patterns for highlighting text."
@@ -564,23 +562,15 @@ not suitable."
            'face-name-history
 	   (cdr hi-lock-face-defaults))))
 
-(defvar hi-lock--inhibit-font-lock-hook nil
-  "Inhibit the action of `hi-lock-font-lock-hook'.
-This is used by `hi-lock-set-pattern'.")
-
 (defun hi-lock-set-pattern (regexp face)
   "Highlight REGEXP with face FACE."
-  (let ((pattern (list regexp (list 0 (list 'quote face) t)))
-	;; The call to `font-lock-add-keywords' below might disable
-	;; and re-enable font-lock mode.  If so, we don't want
-	;; `hi-lock-font-lock-hook' to run.  This can be removed once
-	;; Bug#635 is fixed. -- cyd
-	(hi-lock--inhibit-font-lock-hook t))
+  (let ((pattern (list regexp (list 0 (list 'quote face) t))))
     (unless (member pattern hi-lock-interactive-patterns)
-      (font-lock-add-keywords nil (list pattern) t)
       (push pattern hi-lock-interactive-patterns)
       (if font-lock-fontified
-          (font-lock-fontify-buffer)
+	  (progn
+	    (font-lock-add-keywords nil (list pattern) t)
+	    (font-lock-fontify-buffer))
         (let* ((serial (hi-lock-string-serialize regexp))
                (range-min (- (point) (/ hi-lock-highlight-range 2)))
                (range-max (+ (point) (/ hi-lock-highlight-range 2)))
@@ -641,12 +631,9 @@ This is used by `hi-lock-set-pattern'.")
 
 (defun hi-lock-font-lock-hook ()
   "Add hi-lock patterns to font-lock's."
-  (unless hi-lock--inhibit-font-lock-hook
-    (if font-lock-mode
-	(progn
-	  (font-lock-add-keywords nil hi-lock-file-patterns t)
-	  (font-lock-add-keywords nil hi-lock-interactive-patterns t))
-      (hi-lock-mode -1))))
+  (when font-lock-fontified
+    (font-lock-add-keywords nil hi-lock-file-patterns t)
+    (font-lock-add-keywords nil hi-lock-interactive-patterns t)))
 
 (defvar hi-lock-string-serialize-hash
   (make-hash-table :test 'equal)
@@ -676,5 +663,4 @@ A string is considered new if it had not previously been used in a call to
 
 (provide 'hi-lock)
 
-;; arch-tag: d2e8fd07-4cc9-4c6f-a200-1e729bc54066
 ;;; hi-lock.el ends here

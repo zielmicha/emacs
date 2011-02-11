@@ -1,6 +1,5 @@
 /* Record indices of function doc strings stored in a file.
-   Copyright (C) 1985, 1986, 1993, 1994, 1995, 1997, 1998, 1999, 2000, 2001,
-                 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 1985-1986, 1993-1995, 1997-2011
                  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
@@ -25,18 +24,8 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <sys/file.h>	/* Must be after sys/types.h for USG*/
 #include <ctype.h>
 #include <setjmp.h>
-
-#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
-
-#ifndef O_RDONLY
-#define O_RDONLY 0
-#endif
 
 #include "lisp.h"
 #include "buffer.h"
@@ -45,12 +34,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "keymap.h"
 #include "buildobj.h"
 
-Lisp_Object Vdoc_file_name;
-
 Lisp_Object Qfunction_documentation;
-
-/* A list of files used to build this Emacs binary.  */
-static Lisp_Object Vbuild_files;
 
 /* Buffer used for reading from documentation file.  */
 static char *get_doc_string_buffer;
@@ -99,8 +83,8 @@ get_doc_string (Lisp_Object filepos, int unibyte, int definition)
   register int fd;
   register char *name;
   register char *p, *p1;
-  int minsize;
-  int offset, position;
+  EMACS_INT minsize;
+  EMACS_INT offset, position;
   Lisp_Object file, tem;
 
   if (INTEGERP (filepos))
@@ -136,12 +120,12 @@ get_doc_string (Lisp_Object filepos, int unibyte, int definition)
       if (minsize < 8)
 	minsize = 8;
       name = (char *) alloca (minsize + SCHARS (file) + 8);
-      strcpy (name, SDATA (Vdoc_directory));
-      strcat (name, SDATA (file));
+      strcpy (name, SSDATA (Vdoc_directory));
+      strcat (name, SSDATA (file));
     }
   else
     {
-      name = (char *) SDATA (file);
+      name = SSDATA (file);
     }
 
   fd = emacs_open (name, O_RDONLY, 0);
@@ -153,7 +137,7 @@ get_doc_string (Lisp_Object filepos, int unibyte, int definition)
 	  /* Preparing to dump; DOC file is probably not installed.
 	     So check in ../etc. */
 	  strcpy (name, "../etc/");
-	  strcat (name, SDATA (file));
+	  strcat (name, SSDATA (file));
 
 	  fd = emacs_open (name, O_RDONLY, 0);
 	}
@@ -179,14 +163,14 @@ get_doc_string (Lisp_Object filepos, int unibyte, int definition)
   p = get_doc_string_buffer;
   while (1)
     {
-      int space_left = (get_doc_string_buffer_size
-			- (p - get_doc_string_buffer));
+      EMACS_INT space_left = (get_doc_string_buffer_size
+			      - (p - get_doc_string_buffer));
       int nread;
 
       /* Allocate or grow the buffer if we need to.  */
       if (space_left == 0)
 	{
-	  int in_buffer = p - get_doc_string_buffer;
+	  EMACS_INT in_buffer = p - get_doc_string_buffer;
 	  get_doc_string_buffer_size += 16 * 1024;
 	  get_doc_string_buffer
 	    = (char *) xrealloc (get_doc_string_buffer,
@@ -286,8 +270,8 @@ get_doc_string (Lisp_Object filepos, int unibyte, int definition)
   else
     {
       /* The data determines whether the string is multibyte.  */
-      int nchars = multibyte_chars_in_text (get_doc_string_buffer + offset,
-					    to - (get_doc_string_buffer + offset));
+      EMACS_INT nchars = multibyte_chars_in_text (get_doc_string_buffer + offset,
+						  to - (get_doc_string_buffer + offset));
       return make_string_from_bytes (get_doc_string_buffer + offset,
 				     nchars,
 				     to - (get_doc_string_buffer + offset));
@@ -551,8 +535,8 @@ the same file name is found in the `doc-directory'.  */)
 {
   int fd;
   char buf[1024 + 1];
-  register int filled;
-  register int pos;
+  register EMACS_INT filled;
+  register EMACS_INT pos;
   register char *p, *end;
   Lisp_Object sym;
   char *name;
@@ -575,9 +559,9 @@ the same file name is found in the `doc-directory'.  */)
       CHECK_STRING (Vdoc_directory);
       name = (char *) alloca (SCHARS (filename)
 			  + SCHARS (Vdoc_directory) + 1);
-      strcpy (name, SDATA (Vdoc_directory));
+      strcpy (name, SSDATA (Vdoc_directory));
     }
-  strcat (name, SDATA (filename)); 	/*** Add this line ***/
+  strcat (name, SSDATA (filename)); 	/*** Add this line ***/
 
   /* Vbuild_files is nil when temacs is run, and non-nil after that.  */
   if (NILP (Vbuild_files))
@@ -586,7 +570,7 @@ the same file name is found in the `doc-directory'.  */)
 
     for (beg = buildobj; *beg; beg = end)
       {
-        int len;
+        EMACS_INT len;
 
         while (*beg && isspace (*beg)) ++beg;
 
@@ -633,7 +617,7 @@ the same file name is found in the `doc-directory'.  */)
               if (end - p > 4 && end[-2] == '.'
                   && (end[-1] == 'o' || end[-1] == 'c'))
                 {
-                  int len = end - p - 2;
+                  EMACS_INT len = end - p - 2;
                   char *fromfile = alloca (len + 1);
                   strncpy (fromfile, &p[2], len);
                   fromfile[len] = 0;
@@ -678,7 +662,7 @@ the same file name is found in the `doc-directory'.  */)
 	}
       pos += end - buf;
       filled -= end - buf;
-      memcpy (buf, end, filled);
+      memmove (buf, end, filled);
     }
   emacs_close (fd);
   return Qnil;
@@ -705,16 +689,16 @@ a new string, without any text properties, is returned.  */)
   int changed = 0;
   register unsigned char *strp;
   register unsigned char *bufp;
-  int idx;
-  int bsize;
+  EMACS_INT idx;
+  EMACS_INT bsize;
   Lisp_Object tem;
   Lisp_Object keymap;
   unsigned char *start;
-  int length, length_byte;
+  EMACS_INT length, length_byte;
   Lisp_Object name;
   struct gcpro gcpro1, gcpro2, gcpro3, gcpro4;
   int multibyte;
-  int nchars;
+  EMACS_INT nchars;
 
   if (NILP (string))
     return Qnil;
@@ -766,7 +750,7 @@ a new string, without any text properties, is returned.  */)
 	}
       else if (strp[0] == '\\' && strp[1] == '[')
 	{
-	  int start_idx;
+	  EMACS_INT start_idx;
 	  int follow_remap = 1;
 
 	  changed = 1;
@@ -805,7 +789,7 @@ a new string, without any text properties, is returned.  */)
 
 	  if (NILP (tem))	/* but not on any keys */
 	    {
-	      int offset = bufp - buf;
+	      EMACS_INT offset = bufp - buf;
 	      buf = (unsigned char *) xrealloc (buf, bsize += 4);
 	      bufp = buf + offset;
 	      memcpy (bufp, "M-x ", 4);
@@ -828,7 +812,7 @@ a new string, without any text properties, is returned.  */)
       else if (strp[0] == '\\' && (strp[1] == '{' || strp[1] == '<'))
 	{
 	  struct buffer *oldbuf;
-	  int start_idx;
+	  EMACS_INT start_idx;
 	  /* This is for computing the SHADOWS arg for describe_map_tree.  */
 	  Lisp_Object active_maps = Fcurrent_active_maps (Qnil, Qnil);
 	  Lisp_Object earlier_maps;
@@ -899,14 +883,14 @@ a new string, without any text properties, is returned.  */)
 	  length_byte = SBYTES (tem);
 	subst:
 	  {
-	    int offset = bufp - buf;
+	    EMACS_INT offset = bufp - buf;
 	    buf = (unsigned char *) xrealloc (buf, bsize += length_byte);
 	    bufp = buf + offset;
 	    memcpy (bufp, start, length_byte);
 	    bufp += length_byte;
 	    nchars += length;
 	    /* Check STRING again in case gc relocated it.  */
-	    strp = (unsigned char *) SDATA (string) + idx;
+	    strp = SDATA (string) + idx;
 	  }
 	}
       else if (! multibyte)		/* just copy other chars */
@@ -940,11 +924,11 @@ syms_of_doc (void)
   Qfunction_documentation = intern_c_string ("function-documentation");
   staticpro (&Qfunction_documentation);
 
-  DEFVAR_LISP ("internal-doc-file-name", &Vdoc_file_name,
+  DEFVAR_LISP ("internal-doc-file-name", Vdoc_file_name,
 	       doc: /* Name of file containing documentation strings of built-in symbols.  */);
   Vdoc_file_name = Qnil;
 
-  DEFVAR_LISP ("build-files", &Vbuild_files,
+  DEFVAR_LISP ("build-files", Vbuild_files,
                doc: /* A list of files used to build this Emacs binary.  */);
   Vbuild_files = Qnil;
 
@@ -953,6 +937,3 @@ syms_of_doc (void)
   defsubr (&Ssnarf_documentation);
   defsubr (&Ssubstitute_command_keys);
 }
-
-/* arch-tag: 56281d4d-6949-43e2-be2e-f6517de744ba
-   (do not change this comment) */

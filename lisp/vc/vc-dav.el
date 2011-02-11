@@ -1,10 +1,11 @@
 ;;; vc-dav.el --- vc.el support for WebDAV
 
-;; Copyright (C) 2001, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2004-2011 Free Software Foundation, Inc.
 
 ;; Author: Bill Perry <wmperry@gnu.org>
 ;; Maintainer: Bill Perry <wmperry@gnu.org>
 ;; Keywords: url, vc
+;; Package: vc
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -185,5 +186,4 @@ It should return a status of either 0 (no differences found), or
 
 (provide 'vc-dav)
 
-;; arch-tag: 0a0fb9fe-8190-4c0a-a179-5c291d3a467e
 ;;; vc-dav.el ends here

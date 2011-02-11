@@ -1,6 +1,5 @@
 /* Definitions for asynchronous process control in GNU Emacs.
-   Copyright (C) 1985, 1994, 2001, 2002, 2003, 2004,
-                 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1994, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -20,8 +19,11 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_UNISTD_H
+
 #include <unistd.h>
+
+#ifdef HAVE_GNUTLS
+#include "gnutls.h"
 #endif
 
 /* This structure records information about a subprocess
@@ -76,6 +78,10 @@ struct Lisp_Process
     /* Working buffer for encoding.  */
     Lisp_Object encoding_buf;
 
+#ifdef HAVE_GNUTLS
+    Lisp_Object gnutls_cred_type;
+#endif
+
     /* After this point, there are no Lisp_Objects any more.  */
     /* alloc.c assumes that `pid' is the first such non-Lisp slot.  */
 
@@ -121,6 +127,15 @@ struct Lisp_Process
        needs to be synced to `status'.  */
     unsigned int raw_status_new : 1;
     int raw_status;
+
+#ifdef HAVE_GNUTLS
+    gnutls_initstage_t gnutls_initstage;
+    gnutls_session_t gnutls_state;
+    gnutls_certificate_client_credentials gnutls_x509_cred;
+    gnutls_anon_client_credentials_t gnutls_anon_cred;
+    int gnutls_log_level;
+    int gnutls_p;
+#endif
 };
 
 /* Every field in the preceding structure except for the first two
@@ -177,5 +192,10 @@ extern void hold_keyboard_input (void);
 extern void unhold_keyboard_input (void);
 extern int kbd_on_hold_p (void);
 
-/* arch-tag: dffedfc4-d7bc-4b58-a26f-c16155449c72
-   (do not change this comment) */
+typedef void (*fd_callback)(int fd, void *data, int for_read);
+
+extern void add_read_fd (int fd, fd_callback func, void *data);
+extern void delete_read_fd (int fd);
+extern void add_write_fd (int fd, fd_callback func, void *data);
+extern void delete_write_fd (int fd);
+

@@ -1,7 +1,6 @@
 ;;; mm-extern.el --- showing message/external-body
 
-;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2000-2011  Free Software Foundation, Inc.
 
 ;; Author: Shenghuo Zhu <zsh@cs.rochester.edu>
 ;; Keywords: message external-body
@@ -25,7 +24,7 @@
 
 ;;; Code:
 
-;; For Emacs < 22.2.
+;; For Emacs <22.2 and XEmacs.
 (eval-and-compile
   (unless (fboundp 'declare-function) (defmacro declare-function (&rest r))))
 
@@ -91,7 +90,7 @@
   (let (mm-extern-anonymous)
     (mm-extern-anon-ftp handle)))
 
-(declare-function message-goto-body "message" (&optional interactivep))
+(declare-function message-goto-body "message" ())
 
 (defun mm-extern-mail-server (handle)
   (require 'message)
@@ -167,5 +166,4 @@ If NO-DISPLAY is nil, display it. Otherwise, do nothing after replacing."
 
 (provide 'mm-extern)
 
-;; arch-tag: 9653808e-14d9-4172-86e6-adceaa05378e
 ;;; mm-extern.el ends here

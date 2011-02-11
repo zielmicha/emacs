@@ -1,6 +1,6 @@
 /* GNU Emacs case conversion functions.
-   Copyright (C) 1985, 1994, 1997, 1998, 1999, 2001, 2002, 2003, 2004,
-                 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+
+Copyright (C) 1985, 1994, 1997-1999, 2001-2011 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -352,8 +352,8 @@ static Lisp_Object
 operate_on_word (Lisp_Object arg, EMACS_INT *newpoint)
 {
   Lisp_Object val;
-  int farend;
-  int iarg;
+  EMACS_INT farend;
+  EMACS_INT iarg;
 
   CHECK_NUMBER (arg);
   iarg = XINT (arg);
@@ -443,5 +443,3 @@ keys_of_casefiddle (void)
   initial_define_key (meta_map, 'c', "capitalize-word");
 }
 
-/* arch-tag: 60a73c66-5489-47e7-a81f-cead4057c526
-   (do not change this comment) */

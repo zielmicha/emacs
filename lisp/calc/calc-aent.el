@@ -1,7 +1,6 @@
 ;;; calc-aent.el --- algebraic entry functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004, 2005,
-;;   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1990-1993, 2001-2011  Free Software Foundation, Inc.
 
 ;; Author: Dave Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <jay.p.belanger@gmail.com>
@@ -315,10 +314,24 @@ The value t means abort and give an error message.")
 		calc-dollar-used 0)))
       (calc-handle-whys))))
 
-(defvar calc-alg-ent-map nil
+(defvar calc-alg-ent-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map minibuffer-local-map)
+    (define-key map "'" 'calcAlg-previous)
+    (define-key map "`" 'calcAlg-edit)
+    (define-key map "\C-m" 'calcAlg-enter)
+    (define-key map "\C-j" 'calcAlg-enter)
+    map)
   "The keymap used for algebraic entry.")
 
-(defvar calc-alg-ent-esc-map nil
+(defvar calc-alg-ent-esc-map
+  (let ((map (make-keymap))
+        (i 33))
+    (set-keymap-parent map esc-map)
+    (while (< i 127)
+      (define-key map (vector i) 'calcAlg-escape)
+      (setq i (1+ i)))
+    map)
   "The keymap used for escapes in algebraic entry.")
 
 (defvar calc-alg-exp)
@@ -326,19 +339,8 @@ The value t means abort and give an error message.")
 ;;;###autoload
 (defun calc-do-alg-entry (&optional initial prompt no-normalize history)
   (let* ((calc-buffer (current-buffer))
-	 (blink-paren-function 'calcAlg-blink-matching-open)
+	 (blink-matching-check-function 'calcAlg-blink-matching-check)
 	 (calc-alg-exp 'error))
-    (unless calc-alg-ent-map
-      (setq calc-alg-ent-map (copy-keymap minibuffer-local-map))
-      (define-key calc-alg-ent-map "'" 'calcAlg-previous)
-      (define-key calc-alg-ent-map "`" 'calcAlg-edit)
-      (define-key calc-alg-ent-map "\C-m" 'calcAlg-enter)
-      (define-key calc-alg-ent-map "\C-j" 'calcAlg-enter)
-      (let ((i 33))
-        (setq calc-alg-ent-esc-map (copy-keymap esc-map))
-        (while (< i 127)
-          (aset (nth 1 calc-alg-ent-esc-map) i 'calcAlg-escape)
-          (setq i (1+ i)))))
     (define-key calc-alg-ent-map "\e" nil)
     (if (eq calc-algebraic-mode 'total)
 	(define-key calc-alg-ent-map "\e" calc-alg-ent-esc-map)
@@ -430,18 +432,9 @@ The value t means abort and give an error message.")
 		      exp))
       (exit-minibuffer))))
 
-(defun calcAlg-blink-matching-open ()
-  (let ((rightpt (point))
- 	(leftpt nil)
-        (rightchar (preceding-char))
-        leftchar
-        rightsyntax
-        leftsyntax)
-    (save-excursion
-      (condition-case ()
- 	  (setq leftpt (scan-sexps rightpt -1)
-                leftchar (char-after leftpt))
-  	(error nil)))
+(defun calcAlg-blink-matching-check (leftpt rightpt)
+  (let ((rightchar (char-before rightpt))
+        (leftchar (if leftpt (char-after leftpt))))
     (if (and leftpt
  	     (or (and (= rightchar ?\))
  		      (= leftchar ?\[))
@@ -450,20 +443,9 @@ The value t means abort and give an error message.")
  	     (save-excursion
  	       (goto-char leftpt)
  	       (looking-at ".+\\(\\.\\.\\|\\\\dots\\|\\\\ldots\\)")))
- 	(let ((leftsaved (aref (syntax-table) leftchar))
-              (rightsaved (aref (syntax-table) rightchar)))
- 	  (unwind-protect
- 	      (progn
-                (cond ((= leftchar ?\[)
-                       (aset (syntax-table) leftchar (cons 4 ?\)))
-                       (aset (syntax-table) rightchar (cons 5 ?\[)))
-                      (t
-                       (aset (syntax-table) leftchar (cons 4 ?\]))
-                       (aset (syntax-table) rightchar (cons 5 ?\())))
- 		(blink-matching-open))
-            (aset (syntax-table) leftchar leftsaved)
-            (aset (syntax-table) rightchar rightsaved)))
-      (blink-matching-open))))
+        ;; [2..5) perfectly valid!
+ 	nil
+      (blink-matching-check-mismatch leftpt rightpt))))
 
 ;;;###autoload
 (defun calc-alg-digit-entry ()
@@ -1288,5 +1270,4 @@ If the current Calc language does not use placeholders, return nil."
 ;; generated-autoload-file: "calc-loaddefs.el"
 ;; End:
 
-;; arch-tag: 5599e45d-e51e-44bb-9a20-9f4ed8c96c32
 ;;; calc-aent.el ends here

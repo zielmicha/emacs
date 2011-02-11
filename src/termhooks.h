@@ -1,6 +1,6 @@
 /* Parameters and display hooks for terminal devices.
-   Copyright (C) 1985, 1986, 1993, 1994, 2001, 2002, 2003, 2004,
-                 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+
+Copyright (C) 1985-1986, 1993-1994, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -43,11 +43,6 @@ extern void (*fullscreen_hook) (struct frame *f);
 
 
 /* Input queue declarations and hooks.  */
-
-/* Expedient hack: only provide the below definitions to files that
-   are prepared to handle lispy things.  CONSP is defined if lisp.h
-   has been included before this file.  */
-#ifdef CONSP
 
 enum event_kind
 {
@@ -228,9 +223,11 @@ struct input_event
   /* For an ASCII_KEYSTROKE_EVENT and MULTIBYTE_CHAR_KEYSTROKE_EVENT,
      this is the character.
      For a NON_ASCII_KEYSTROKE_EVENT, this is the keysym code.
-     For a mouse event, this is the button number.  */
+     For a mouse event, this is the button number.
+     For a HELP_EVENT, this is the position within the object
+      (stored in ARG below) where the help was found.  */
   /* In WindowsNT, for a mouse wheel event, this is the delta.  */
-  int code;
+  EMACS_INT code;
   enum scroll_bar_part part;
 
   int modifiers;		/* See enum below for interpretation.  */
@@ -315,8 +312,6 @@ extern void term_mouse_moveto (int, int);
 extern struct tty_display_info *gpm_tty;
 #endif
 
-#endif /* CONSP */
-
 
 struct ns_display_info;
 struct x_display_info;
@@ -332,6 +327,11 @@ struct terminal
 
   /* Parameter alist of this terminal.  */
   Lisp_Object param_alist;
+
+  /* List of charsets supported by the terminal.  It is set by
+     Fset_terminal_coding_system_internal along with
+     the member terminal_coding.  */
+  Lisp_Object charset_list;
 
   /* All fields before `next_terminal' should be Lisp_Object and are traced
      by the GC.  All fields afterwards are ignored by the GC.  */
@@ -647,7 +647,6 @@ extern struct terminal *terminal_list;
 /* Return true if the terminal device is not suspended. */
 #define TERMINAL_ACTIVE_P(d) (((d)->type != output_termcap && (d)->type !=output_msdos_raw) || (d)->display_info.tty->input)
 
-extern Lisp_Object get_terminal_param (struct terminal *, Lisp_Object);
 extern struct terminal *get_terminal (Lisp_Object terminal, int);
 extern struct terminal *create_terminal (void);
 extern void delete_terminal (struct terminal *);
@@ -659,5 +658,3 @@ extern struct terminal *initial_terminal;
 extern void close_gpm (int gpm_fd);
 #endif
 
-/* arch-tag: 33a00ecc-52b5-4186-a410-8801ac9f087d
-   (do not change this comment) */

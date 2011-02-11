@@ -1,8 +1,7 @@
 \input texinfo  @c -*-texinfo-*-
 @c This file is used for printing the GNU Emacs Lisp Reference Manual
 @c in two volumes.  It is a modified version of elisp.texi.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2001,
-@c   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+@c Copyright (C) 1990-1995, 1998-1999, 2001-2011
 @c   Free Software Foundation, Inc.
 @c %**start of header
 @setfilename elisp
@@ -27,7 +26,7 @@
 @c Version of the manual and of Emacs.
 @c Please remember to update the edition number in README as well.
 @set VERSION  3.0
-@set EMACSVER 24.0.50
+@include emacsver.texi
 @set DATE July 2009
 
 @dircategory Emacs
@@ -69,7 +68,7 @@ This is edition @value{VERSION} of the GNU Emacs Lisp Reference Manual,@*
 corresponding to Emacs version @value{EMACSVER}.
 
 Copyright @copyright{} 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998,
-1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010  Free Software
+1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011  Free Software
 Foundation, Inc.
 
 @quotation
@@ -178,6 +177,8 @@ Reference Manual, corresponding to GNU Emacs version @value{EMACSVER}.
 * Display::                 Features for controlling the screen display.
 * System Interface::        Getting the user id, system type, environment
                               variables, and other such things.
+
+* Packaging::               Preparing Lisp code for distribution.
 
 Appendices
 
@@ -1349,9 +1350,8 @@ The @code{display} Property
 * Replacing Specs::         Display specs that replace the text.
 * Specified Space::         Displaying one space with a specified width.
 * Pixel Specification::     Specifying space width or height in pixels.
-* Other Display Specs::     Displaying an image; magnifying text; moving it
-                              up or down on the page; adjusting the width
-                              of spaces within text.
+* Other Display Specs::     Displaying an image; adjusting the height,
+                              spacing, and other properties of text.
 * Display Margins::         Displaying text or images to the side of
                               the main text.
 
@@ -1413,6 +1413,12 @@ Operating System Interface
 * Batch Mode::              Running Emacs without terminal interaction.
 * Session Management::      Saving and restoring state with
                               X Session Management.
+
+Preparing Lisp code for distribution
+
+* Packaging Basics::        The basic concepts of Emacs Lisp packages.
+* Simple Packages::         How to package a single .el file.
+* Multi-file Packages::     How to package multiple files.
 
 Starting Up Emacs
 
@@ -1541,7 +1547,3 @@ Object Internals
 
 
 These words prevent "local variables" above from confusing Emacs.
-
-@ignore
-   arch-tag: dfdbecf8-fec2-49c1-8427-3e8ac8b0b849
-@end ignore

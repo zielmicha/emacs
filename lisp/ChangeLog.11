@@ -2000,7 +2000,7 @@
 	(math-rewrite, math-rewrite-phase): Replace variable expr by
 	declared variable.
 	(math-rewrite-heads-heads, math-rewrite-heads-skips)
-	(math-rewrite-heads-blanks ): New variables.
+	(math-rewrite-heads-blanks): New variables.
 	(math-rewrite-heads, math-rewrite-heads-rec): Replace variables
 	heads, skips and blanks by declared variables.
 	(math-rwcomp-subst-old, math-rwcomp-subst-new)
@@ -11494,7 +11494,7 @@
 	* net/zone-mode.el (zone-mode): Use write-file-functions, not
 	write-file-hooks.
 
-2003-12-29  Eric Hanchrow  <offby1@blarg.net>  (tiny change)
+2003-12-29  Eric Hanchrow  <offby1@blarg.net>
 
 	* autorevert.el (auto-revert-interval): Doc fix.
 
@@ -11832,7 +11832,7 @@
 	(ido-saved-vc-hb): Rename from ido-saved-vc-mt.  Uses changed.
 	(ido-no-final-slash): New defun.
 	(ido-make-prompt, ido-file-internal, ido-toggle-vc)
-	(ido-read-file-name): ): Toggle VC checking via
+	(ido-read-file-name): Toggle VC checking via
 	vc-handled-backends instead of vc-master-templates.
 	(ido-file-internal): Handle ido-use-url-at-point and
 	ido-use-filename-at-point via code borrowed from ffap-guesser.
@@ -12922,7 +12922,7 @@
 
 	* emacs-lisp/tq.el (tq-create): Fix mixed up unquote style.
 
-2003-09-12  Eric Hanchrow  <offby1@blarg.net>  (tiny change)
+2003-09-12  Eric Hanchrow  <offby1@blarg.net>
 
 	* dired.el (dired-mode-map): Fix typo.
 
@@ -14336,8 +14336,7 @@ See ChangeLog.10 for earlier changes.
 ;; coding: utf-8
 ;; End:
 
-    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-      Free Software Foundation, Inc.
+  Copyright (C) 2003-2011  Free Software Foundation, Inc.
 
   This file is part of GNU Emacs.
 
@@ -14353,5 +14352,3 @@ See ChangeLog.10 for earlier changes.
 
   You should have received a copy of the GNU General Public License
   along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
-
-;; arch-tag: 2fe8d7b0-27e3-4634-a0b7-db70ff071825

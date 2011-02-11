@@ -1,6 +1,6 @@
 ;;; sieve.el --- Utilities to manage sieve scripts
 
-;; Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2001-2011 Free Software Foundation, Inc.
 
 ;; Author: Simon Josefsson <simon@josefsson.org>
 
@@ -320,11 +320,13 @@ Server  : " server ":" (or port "2000") "
       (insert "\n"))))
 
 (defun sieve-open-server (server &optional port)
-  ;; open server
-  (set (make-local-variable 'sieve-manage-buffer)
-       (sieve-manage-open server))
-  ;; authenticate
-  (sieve-manage-authenticate nil nil sieve-manage-buffer))
+  "Open SERVER (on PORT) and authenticate."
+  (with-current-buffer
+      (or ;; open server
+       (set (make-local-variable 'sieve-manage-buffer)
+	    (sieve-manage-open server))
+       (error "Error opening server %s" server))
+    (sieve-manage-authenticate)))
 
 (defun sieve-refresh-scriptlist ()
   (interactive)
@@ -380,5 +382,4 @@ Server  : " server ":" (or port "2000") "
 
 (provide 'sieve)
 
-;; arch-tag: 7f6a6d94-94e1-4654-ab9a-aee21b9b8a94
 ;; sieve.el ends here

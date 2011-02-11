@@ -1,13 +1,13 @@
 ;;; js.el --- Major mode for editing JavaScript
 
-;; Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2011 Free Software Foundation, Inc.
 
 ;; Author: Karl Landstrom <karl.landstrom@brgeight.se>
 ;;         Daniel Colascione <dan.colascione@gmail.com>
 ;; Maintainer: Daniel Colascione <dan.colascione@gmail.com>
 ;; Version: 9
 ;; Date: 2009-07-25
-;; Keywords: languages, oop, javascript
+;; Keywords: languages, javascript
 
 ;; This file is part of GNU Emacs.
 
@@ -45,16 +45,13 @@
 
 ;;; Code:
 
-(eval-and-compile
-  (require 'cc-mode)
-  (require 'font-lock)
-  (require 'newcomment)
-  (require 'imenu)
-  (require 'etags)
-  (require 'thingatpt)
-  (require 'easymenu)
-  (require 'moz nil t)
-  (require 'json nil t))
+
+(require 'cc-mode)
+(require 'newcomment)
+(require 'thingatpt)                    ; forward-symbol etc
+(require 'imenu)
+(require 'moz nil t)
+(require 'json nil t)
 
 (eval-when-compile
   (require 'cl)
@@ -431,10 +428,31 @@ Match group 1 is the name of the macro.")
   :group 'js)
 
 (defcustom js-expr-indent-offset 0
-  "Number of additional spaces used for indentation of continued expressions.
+  "Number of additional spaces for indenting continued expressions.
 The value must be no less than minus `js-indent-level'."
   :type 'integer
   :group 'js)
+
+(defcustom js-paren-indent-offset 0
+  "Number of additional spaces for indenting expressions in parentheses.
+The value must be no less than minus `js-indent-level'."
+  :type 'integer
+  :group 'js
+  :version "24.1")
+
+(defcustom js-square-indent-offset 0
+  "Number of additional spaces for indenting expressions in square braces.
+The value must be no less than minus `js-indent-level'."
+  :type 'integer
+  :group 'js
+  :version "24.1")
+
+(defcustom js-curly-indent-offset 0
+  "Number of additional spaces for indenting expressions in curly braces.
+The value must be no less than minus `js-indent-level'."
+  :type 'integer
+  :group 'js
+  :version "24.1")
 
 (defcustom js-auto-indent-flag t
   "Whether to automatically indent when typing punctuation characters.
@@ -682,7 +700,7 @@ point at BOB."
                (setq str-terminator ?/))
              (re-search-forward
               (concat "\\([^\\]\\|^\\)" (string str-terminator))
-              (save-excursion (end-of-line) (point)) t))
+              (point-at-eol) t))
             ((nth 7 parse)
              (forward-line))
             ((or (nth 4 parse)
@@ -704,20 +722,19 @@ as if strings, cpp macros, and comments have been removed.
 
 If invoked while inside a macro, it treats the contents of the
 macro as normal text."
+  (unless count (setq count 1))
   (let ((saved-point (point))
-        (search-expr
-         (cond ((null count)
-                '(js--re-search-forward-inner regexp bound 1))
-               ((< count 0)
-                '(js--re-search-backward-inner regexp bound (- count)))
-               ((> count 0)
-                '(js--re-search-forward-inner regexp bound count)))))
+        (search-fun
+         (cond ((< count 0) (setq count (- count))
+                #'js--re-search-backward-inner)
+               ((> count 0) #'js--re-search-forward-inner)
+               (t #'ignore))))
     (condition-case err
-        (eval search-expr)
+        (funcall search-fun regexp bound count)
       (search-failed
        (goto-char saved-point)
        (unless noerror
-         (error (error-message-string err)))))))
+         (signal (car err) (cdr err)))))))
 
 
 (defun js--re-search-backward-inner (regexp &optional bound count)
@@ -739,7 +756,7 @@ macro as normal text."
                (setq str-terminator ?/))
              (re-search-backward
               (concat "\\([^\\]\\|^\\)" (string str-terminator))
-              (save-excursion (beginning-of-line) (point)) t))
+              (point-at-bol) t))
             ((nth 7 parse)
              (goto-char (nth 8 parse)))
             ((or (nth 4 parse)
@@ -761,20 +778,7 @@ as if strings, preprocessor macros, and comments have been
 removed.
 
 If invoked while inside a macro, treat the macro as normal text."
-  (let ((saved-point (point))
-        (search-expr
-         (cond ((null count)
-                '(js--re-search-backward-inner regexp bound 1))
-               ((< count 0)
-                '(js--re-search-forward-inner regexp bound (- count)))
-               ((> count 0)
-                '(js--re-search-backward-inner regexp bound count)))))
-    (condition-case err
-        (eval search-expr)
-      (search-failed
-       (goto-char saved-point)
-       (unless noerror
-         (error (error-message-string err)))))))
+  (js--re-search-forward regexp bound noerror (if count (- count) -1)))
 
 (defun js--forward-expression ()
   "Move forward over a whole JavaScript expression.
@@ -1653,18 +1657,18 @@ This performs fontification according to `js--class-styles'."
 ;; XXX: Javascript can continue a regexp literal across lines so long
 ;; as the newline is escaped with \. Account for that in the regexp
 ;; below.
-(defconst js--regexp-literal
-  "[=(,:]\\(?:\\s-\\|\n\\)*\\(/\\)\\(?:\\\\/\\|[^/*]\\)\\(?:\\\\/\\|[^/]\\)*\\(/\\)"
+(eval-and-compile
+  (defconst js--regexp-literal
+    "[=(,:]\\(?:\\s-\\|\n\\)*\\(/\\)\\(?:\\\\.\\|[^/*\\]\\)\\(?:\\\\.\\|[^/\\]\\)*\\(/\\)"
   "Regexp matching a JavaScript regular expression literal.
 Match groups 1 and 2 are the characters forming the beginning and
-end of the literal.")
+end of the literal."))
 
-;; we want to match regular expressions only at the beginning of
-;; expressions
-(defconst js-font-lock-syntactic-keywords
-  `((,js--regexp-literal (1 "|") (2 "|")))
-  "Syntactic font lock keywords matching regexps in JavaScript.
-See `font-lock-keywords'.")
+(defconst js-syntax-propertize-function
+  (syntax-propertize-rules
+   ;; We want to match regular expressions only at the beginning of
+   ;; expressions.
+   (js--regexp-literal (1 "\"") (2 "\""))))
 
 ;;; Indentation
 
@@ -1769,14 +1773,17 @@ nil."
           ((eq (char-after) ?#) 0)
           ((save-excursion (js--beginning-of-macro)) 4)
           ((nth 1 parse-status)
+	   ;; A single closing paren/bracket should be indented at the
+	   ;; same level as the opening statement. Same goes for
+	   ;; "case" and "default".
            (let ((same-indent-p (looking-at
                                  "[]})]\\|\\_<case\\_>\\|\\_<default\\_>"))
                  (continued-expr-p (js--continued-expression-p)))
-             (goto-char (nth 1 parse-status))
+             (goto-char (nth 1 parse-status)) ; go to the opening char
              (if (looking-at "[({[]\\s-*\\(/[/*]\\|$\\)")
-                 (progn
+                 (progn ; nothing following the opening paren/bracket
                    (skip-syntax-backward " ")
-		   (when (eq (char-before) ?\)) (backward-list))
+                   (when (eq (char-before) ?\)) (backward-list))
                    (back-to-indentation)
                    (cond (same-indent-p
                           (current-column))
@@ -1784,7 +1791,14 @@ nil."
                           (+ (current-column) (* 2 js-indent-level)
                              js-expr-indent-offset))
                          (t
-                          (+ (current-column) js-indent-level))))
+                          (+ (current-column) js-indent-level
+                             (case (char-after (nth 1 parse-status))
+                               (?\( js-paren-indent-offset)
+                               (?\[ js-square-indent-offset)
+                               (?\{ js-curly-indent-offset))))))
+               ;; If there is something following the opening
+               ;; paren/bracket, everything else should be indented at
+               ;; the same level.
                (unless same-indent-p
                  (forward-char)
                  (skip-chars-forward " \t"))
@@ -2117,7 +2131,7 @@ and each value is a marker giving the location of that symbol."
         with imenu-use-markers = t
         for buffer being the buffers
         for imenu-index = (with-current-buffer buffer
-                            (when (eq major-mode 'js-mode)
+                            (when (derived-mode-p 'js-mode)
                               (js--imenu-create-index)))
         do (js--imenu-to-flat imenu-index "" symbols)
         finally return symbols))
@@ -2153,12 +2167,15 @@ marker."
           (setf (car bounds) (point))))
       (buffer-substring (car bounds) (cdr bounds)))))
 
+(defvar find-tag-marker-ring)           ; etags
+
 (defun js-find-symbol (&optional arg)
   "Read a JavaScript symbol and jump to it.
 With a prefix argument, restrict symbols to those from the
 current buffer.  Pushes a mark onto the tag ring just like
 `find-tag'."
   (interactive "P")
+  (require 'etags)
   (let (symbols marker)
     (if (not arg)
         (setq symbols (js--get-all-known-symbols))
@@ -3268,15 +3285,9 @@ If one hasn't been set, or if it's stale, prompt for a new one."
 ;;; Main Function
 
 ;;;###autoload
-(define-derived-mode js-mode prog-mode "js"
-  "Major mode for editing JavaScript.
-
-Key bindings:
-
-\\{js-mode-map}"
-
+(define-derived-mode js-mode prog-mode "Javascript"
+  "Major mode for editing JavaScript."
   :group 'js
-  :syntax-table js-mode-syntax-table
 
   (set (make-local-variable 'indent-line-function) 'js-indent-line)
   (set (make-local-variable 'beginning-of-defun-function)
@@ -3286,10 +3297,9 @@ Key bindings:
 
   (set (make-local-variable 'open-paren-in-column-0-is-defun-start) nil)
   (set (make-local-variable 'font-lock-defaults)
-       (list js--font-lock-keywords
-	     nil nil nil nil
-	     '(font-lock-syntactic-keywords
-               . js-font-lock-syntactic-keywords)))
+       (list js--font-lock-keywords))
+  (set (make-local-variable 'syntax-propertize-function)
+       js-syntax-propertize-function)
 
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (set (make-local-variable 'parse-sexp-lookup-properties) t)
@@ -3312,9 +3322,6 @@ Key bindings:
   (setq imenu-case-fold-search nil)
   (set (make-local-variable 'imenu-create-index-function)
        #'js--imenu-create-index)
-
-  (setq major-mode 'js-mode)
-  (setq mode-name "Javascript")
 
   ;; for filling, pretend we're cc-mode
   (setq c-comment-prefix-regexp "//+\\|\\**"
@@ -3346,10 +3353,9 @@ Key bindings:
   ;; the buffer containing the problem, JIT-lock will apply the
   ;; correct syntax to the regular expresion literal and the problem
   ;; will mysteriously disappear.
-  (font-lock-set-defaults)
-
-  (let (font-lock-keywords) ; leaves syntactic keywords intact
-    (font-lock-fontify-buffer)))
+  ;; FIXME: We should actually do this fontification lazily by adding
+  ;; calls to syntax-propertize wherever it's really needed.
+  (syntax-propertize (point-max)))
 
 ;;;###autoload
 (defalias 'javascript-mode 'js-mode)
@@ -3360,5 +3366,4 @@ Key bindings:
 
 (provide 'js)
 
-;; arch-tag: 1a0d0409-e87f-4fc7-a58c-3731c66ddaac
 ;; js.el ends here

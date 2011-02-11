@@ -1,7 +1,6 @@
 ;;; vc-mcvs.el --- VC backend for the Meta-CVS version-control system
 
-;; Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 2003-2011  Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  None
@@ -102,10 +101,9 @@ If nil, use the value of `vc-diff-switches'.  If t, use no switches."
   :version "22.1"
   :group 'vc)
 
-(defcustom vc-mcvs-header (or (cdr (assoc 'MCVS vc-header-alist))
-			      vc-cvs-header)
+(defcustom vc-mcvs-header vc-cvs-header
   "Header keywords to be inserted by `vc-insert-headers'."
-  :version "22.1"
+  :version "24.1"     ; no longer consult the obsolete vc-header-alist
   :type '(repeat string)
   :group 'vc)
 
@@ -586,5 +584,4 @@ and that it passes `vc-mcvs-global-switches' to it before FLAGS."
 ;;
 ;; ********** READ THIS! **********
 
-;; arch-tag: a39c7c1c-5247-429d-88df-dd7187d2e704
 ;;; vc-mcvs.el ends here

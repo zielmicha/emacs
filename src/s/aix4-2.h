@@ -1,6 +1,5 @@
 /*
-Copyright (C) 1999, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-  2010  Free Software Foundation, Inc.
+Copyright (C) 1999, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -36,10 +35,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #define PTY_ITERATION for (c = 0; !c ; c++)
 #define PTY_NAME_SPRINTF strcpy (pty_name, "/dev/ptc");
 #define PTY_TTY_NAME_SPRINTF strcpy (pty_name, ttyname (fd));
-
-/* Define HAVE_TERMIO if the system provides sysV-style ioctls
-   for terminal control.  */
-#define HAVE_TERMIOS
 
 /* Define HAVE_PTYS if the system supports pty devices.  */
 #define HAVE_PTYS
@@ -92,5 +87,3 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
    to avoid a crash just use the Emacs implementation for that function.  */
 #define BROKEN_GET_CURRENT_DIR_NAME 1
 
-/* arch-tag: 38fe75ea-6aef-42bd-8449-bc34d921a562
-   (do not change this comment) */

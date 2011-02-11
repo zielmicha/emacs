@@ -1,10 +1,10 @@
 ;;; lisp-mode.el --- Lisp mode, and its idiosyncratic commands
 
-;; Copyright (C) 1985, 1986, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-;;   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1985-1986, 1999-2011 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: lisp, languages
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -406,10 +406,7 @@ All commands in `lisp-mode-shared-map' are inherited by this map.")
   (if (and (buffer-modified-p)
 	   (y-or-n-p (format "Save buffer %s first? " (buffer-name))))
       (save-buffer))
-  (let ((compiled-file-name (byte-compile-dest-file buffer-file-name)))
-    (if (file-newer-than-file-p compiled-file-name buffer-file-name)
-	(load-file compiled-file-name)
-      (byte-compile-file buffer-file-name t))))
+  (byte-recompile-file buffer-file-name nil 0 t))
 
 (defcustom emacs-lisp-mode-hook nil
   "Hook run when entering Emacs Lisp mode."
@@ -1069,7 +1066,7 @@ is the buffer position of the start of the containing expression."
                        (goto-char calculate-lisp-indent-last-sexp)
                        (or (and (looking-at ":")
                                 (setq indent (current-column)))
-                           (and (< (save-excursion (beginning-of-line) (point))
+                           (and (< (line-beginning-position)
                                    (prog2 (backward-sexp) (point)))
                                 (looking-at ":")
                                 (setq indent (current-column))))
@@ -1209,31 +1206,17 @@ This function also returns nil meaning don't specify the indentation."
 (put 'prog2 'lisp-indent-function 2)
 (put 'save-excursion 'lisp-indent-function 0)
 (put 'save-window-excursion 'lisp-indent-function 0)
-(put 'save-selected-window 'lisp-indent-function 0)
 (put 'save-restriction 'lisp-indent-function 0)
 (put 'save-match-data 'lisp-indent-function 0)
 (put 'save-current-buffer 'lisp-indent-function 0)
-(put 'with-current-buffer 'lisp-indent-function 1)
-(put 'combine-after-change-calls 'lisp-indent-function 0)
-(put 'with-output-to-string 'lisp-indent-function 0)
-(put 'with-temp-file 'lisp-indent-function 1)
-(put 'with-temp-buffer 'lisp-indent-function 0)
-(put 'with-temp-message 'lisp-indent-function 1)
-(put 'with-syntax-table 'lisp-indent-function 1)
 (put 'let 'lisp-indent-function 1)
 (put 'let* 'lisp-indent-function 1)
 (put 'while 'lisp-indent-function 1)
 (put 'if 'lisp-indent-function 2)
-(put 'read-if 'lisp-indent-function 2)
 (put 'catch 'lisp-indent-function 1)
 (put 'condition-case 'lisp-indent-function 2)
 (put 'unwind-protect 'lisp-indent-function 1)
 (put 'with-output-to-temp-buffer 'lisp-indent-function 1)
-(put 'eval-after-load 'lisp-indent-function 1)
-(put 'dolist 'lisp-indent-function 1)
-(put 'dotimes 'lisp-indent-function 1)
-(put 'when 'lisp-indent-function 1)
-(put 'unless 'lisp-indent-function 1)
 
 (defun indent-sexp (&optional endpos)
   "Indent each line of the list starting just after point.
@@ -1445,5 +1428,4 @@ means don't indent that line."
 
 (provide 'lisp-mode)
 
-;; arch-tag: 414c7f93-c245-4b77-8ed5-ed05ef7ff1bf
 ;;; lisp-mode.el ends here

@@ -1,7 +1,6 @@
 ;;; edmacro.el --- keyboard macro editor
 
-;; Copyright (C) 1993, 1994, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1993-1994, 2001-2011 Free Software Foundation, Inc.
 
 ;; Author: Dave Gillespie <daveg@synaptics.com>
 ;; Maintainer: Dave Gillespie <daveg@synaptics.com>
@@ -81,11 +80,11 @@
   "*Non-nil if `edit-kbd-macro' should leave 8-bit characters intact.
 Default nil means to write characters above \\177 in octal notation.")
 
-(defvar edmacro-mode-map nil)
-(unless edmacro-mode-map
-  (setq edmacro-mode-map (make-sparse-keymap))
-  (define-key edmacro-mode-map "\C-c\C-c" 'edmacro-finish-edit)
-  (define-key edmacro-mode-map "\C-c\C-q" 'edmacro-insert-key))
+(defvar edmacro-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" 'edmacro-finish-edit)
+    (define-key map "\C-c\C-q" 'edmacro-insert-key)
+    map))
 
 (defvar edmacro-store-hook)
 (defvar edmacro-finish-hook)
@@ -785,5 +784,4 @@ This function assumes that the events can be stored in a string."
 
 (provide 'edmacro)
 
-;; arch-tag: 726807b4-3ae6-49de-b0ae-b9590973e0d7
 ;;; edmacro.el ends here

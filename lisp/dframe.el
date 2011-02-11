@@ -1,7 +1,6 @@
 ;;; dframe --- dedicate frame support modes
 
-;;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-;;    2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1996-2011  Free Software Foundation, Inc.
 
 ;; Author: Eric M. Ludlam <zappo@gnu.org>
 ;; Keywords: file, tags, tools
@@ -430,7 +429,8 @@ a cons cell indicating a position of the form (LEFT . TOP)."
   (unless (or (not window-system) (eq window-system 'pc))
     (let* ((pfx (dframe-frame-parameter parent-frame 'left))
 	   (pfy (dframe-frame-parameter parent-frame 'top))
-	   (pfw (frame-pixel-width parent-frame))
+	   (pfw (+ (tool-bar-pixel-width parent-frame)
+		   (frame-pixel-width parent-frame)))
 	   (pfh (frame-pixel-height parent-frame))
 	   (nfw (frame-pixel-width new-frame))
 	   (nfh (frame-pixel-height new-frame))
@@ -459,7 +459,7 @@ a cons cell indicating a position of the form (LEFT . TOP)."
 		      (- (x-display-pixel-height) (car (cdr pfy)) pfh)
 		    (car (cdr pfy)))))
       (cond ((eq location 'right)
-	     (setq newleft (+ pfx pfw 5)
+	     (setq newleft (+ pfx pfw 10)
 		   newtop pfy))
 	    ((eq location 'left)
 	     (setq newleft (- pfx 10 nfw)
@@ -471,7 +471,7 @@ a cons cell indicating a position of the form (LEFT . TOP)."
 		   ;; extra 10 is just dressings for window
 		   ;; decorations.
 		   (let* ((left-guess (- pfx 10 nfw))
-			  (right-guess (+ pfx pfw 5))
+			  (right-guess (+ pfx pfw 10))
 			  (left-margin left-guess)
 			  (right-margin (- (x-display-pixel-width)
 					   right-guess 5 nfw)))
@@ -783,8 +783,8 @@ Must be bound to EVENT."
               (popup-mode-menu event)
             (goto-char (event-closest-point event))
             (beginning-of-line)
-            (forward-char (min 5 (- (save-excursion (end-of-line) (point))
-                                    (save-excursion (beginning-of-line) (point)))))
+            (forward-char (min 5 (- (line-end-position)
+                                    (line-beginning-position))))
             (popup-mode-menu))
           ;; Wait for menu to bail out.  `popup-mode-menu' (and other popup
           ;; menu functions) return immediately.
@@ -990,5 +990,4 @@ mode-line.  This is only useful for non-XEmacs."
 
 (provide 'dframe)
 
-;; arch-tag: df9b91b6-e85e-4a76-a02e-b3cb5b686bd4
 ;;; dframe.el ends here

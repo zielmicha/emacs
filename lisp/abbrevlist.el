@@ -1,11 +1,11 @@
 ;;; abbrevlist.el --- list one abbrev table alphabetically ordered
 
-;; Copyright (C) 1986, 1992, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1992, 2001-2011 Free Software Foundation, Inc.
 ;; Suggested by a previous version by Gildea.
 
 ;; Maintainer: FSF
 ;; Keywords: abbrev
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -52,5 +52,4 @@
 
 (provide 'abbrevlist)
 
-;; arch-tag: 178f0638-6597-4c16-bcee-576c3d8e9217
 ;;; abbrevlist.el ends here

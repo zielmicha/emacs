@@ -1,3 +1,55 @@
+2011-01-08  Glenn Morris  <rgm@gnu.org>
+
+	* sedleim.inp (RUN-EMACS): -batch implies --no-init-file.
+
+2011-01-07  Eli Zaretskii  <eliz@gnu.org>
+
+	* sed2v2.inp (HAVE___BUILTIN_UNWIND_INIT): Define.
+
+2010-12-04  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* sed1v2.inp (M_FILE, S_FILE): Add $(srcdir)/ prefix.
+
+2010-10-15  Eli Zaretskii  <eliz@gnu.org>
+
+	* sed1v2.inp: Use $(..) instead of ${..} in all edit commands.
+	Needed because of changes in revno 101897.
+
+	* sed6.inp (mkinfodir): Edit to avoid Unix shell-isms.  Needed
+	because of changes in revno 101876.
+
+2010-10-10  Dan Nicolaescu  <dann@ics.uci.edu>
+
+	* sed1v2.inp (PROFILING_LDFLAGS):
+	* sed3v2.inp (PROFILING_LDFLAGS): Remove, not defined anymore.
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* mainmake.v2 (install): Remove b2m.
+
+2010-10-02  Eli Zaretskii  <eliz@gnu.org>
+
+	* mainmake.v2 (TAGS tags): Use `find' to filter out loaddefs
+	files.  Make all file names in TAGS tables absolute.
+
+2010-10-01  Eli Zaretskii  <eliz@gnu.org>
+
+	* sed1v2.inp (LIBGNUTLS_LIBS, LIBGNUTLS_CFLAGS): Edit to empty.
+
+2010-09-22  Eli Zaretskii  <eliz@gnu.org>
+
+	* sed1v2.inp (LINKER): Don't edit, variable was removed from
+	src/Makefile.in.
+	(LD_FIRSTFLAG): Edit to empty.
+
+2010-09-17  Eli Zaretskii  <eliz@gnu.org>
+
+	* sed1v2.inp (LIBXML2_LIBS, LIBXML2_CFLAGS): Edit to empty.
+
+2010-08-22  Chong Yidong  <cyd@stupidchicken.com>
+
+	* sedleim.inp (RUN-EMACS): Don't use --multibyte.
+
 2010-08-20  Eli Zaretskii  <eliz@gnu.org>
 
 	* sed1v2.inp (IMAGEMAGICK_LIBS, IMAGEMAGICK_CFLAGS): Edit to empty.
@@ -64,10 +116,10 @@
 	instead of lisp/version.el (see revno 100306).
 
 	* sed1v2.inp (MKDEPDIR): Edit to empty.
-	Delete lines in rules that invoke $(MKDEPDIR).
-	Fix editing rules that begin with "cd ../lisp".
-	Edit out sh if-then-else-fi constructs that test ${CANNOT_DUMP}.
-	Edit out "|| exit ;\" constructs in emacs${EXEEXT} rule.
+	Delete lines in rules that invoke $(MKDEPDIR).  Fix editing rules
+	that begin with "cd ../lisp".  Edit out sh if-then-else-fi
+	constructs that test ${CANNOT_DUMP}.  Edit out "|| exit ;\"
+	constructs in emacs${EXEEXT} rule.
 
 2010-06-03  Dan Nicolaescu  <dann@ics.uci.edu>
 
@@ -1036,11 +1088,9 @@
 
 ;; Local Variables:
 ;; coding: utf-8
-;; add-log-time-zone-rule: t
 ;; End:
 
-    Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003,
-       2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+  Copyright (C) 1994-1999, 2001-2011  Free Software Foundation, Inc.
 
   This file is part of GNU Emacs.
 
@@ -1056,5 +1106,3 @@
 
   You should have received a copy of the GNU General Public License
   along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
-
-;;; arch-tag: b602fbb5-3776-4053-8de2-03da33c29d44

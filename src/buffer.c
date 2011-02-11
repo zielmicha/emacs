@@ -1,8 +1,6 @@
 /* Buffer manipulation primitives for GNU Emacs.
-   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994,
-                 1995, 1997, 1998, 1999, 2000, 2001, 2002,
-                 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-                 Free Software Foundation, Inc.
+
+Copyright (C) 1985-1989, 1993-1995, 1997-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -27,10 +25,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <errno.h>
 #include <stdio.h>
 #include <setjmp.h>
-
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 
 #include "lisp.h"
 #include "intervals.h"
@@ -105,7 +100,6 @@ static char buffer_permanent_local_flags[MAX_PER_BUFFER_VARS];
 
 int last_per_buffer_idx;
 
-EXFUN (Fset_buffer, 1);
 static void call_overlay_mod_hooks (Lisp_Object list, Lisp_Object overlay,
                                     int after, Lisp_Object arg1,
                                     Lisp_Object arg2, Lisp_Object arg3);
@@ -117,35 +111,15 @@ static void reset_buffer_local_variables (struct buffer *b, int permanent_too);
  to prevent lossage due to user rplac'ing this alist or its elements.  */
 Lisp_Object Vbuffer_alist;
 
-/* Functions to call before and after each text change. */
-Lisp_Object Vbefore_change_functions;
-Lisp_Object Vafter_change_functions;
-
-Lisp_Object Vtransient_mark_mode;
-
-/* t means ignore all read-only text properties.
-   A list means ignore such a property if its value is a member of the list.
-   Any non-nil value means ignore buffer-read-only.  */
-Lisp_Object Vinhibit_read_only;
-
-/* List of functions to call that can query about killing a buffer.
-   If any of these functions returns nil, we don't kill it.  */
-Lisp_Object Vkill_buffer_query_functions;
 Lisp_Object Qkill_buffer_query_functions;
 
 /* Hook run before changing a major mode.  */
-Lisp_Object Vchange_major_mode_hook, Qchange_major_mode_hook;
-
-/* List of functions to call before changing an unmodified buffer.  */
-Lisp_Object Vfirst_change_hook;
+Lisp_Object Qchange_major_mode_hook;
 
 Lisp_Object Qfirst_change_hook;
 Lisp_Object Qbefore_change_functions;
 Lisp_Object Qafter_change_functions;
 Lisp_Object Qucs_set_table_for_input;
-
-/* If nonzero, all modification hooks are suppressed.  */
-int inhibit_modification_hooks;
 
 Lisp_Object Qfundamental_mode, Qmode_class, Qpermanent_local;
 Lisp_Object Qpermanent_local_hook;
@@ -1664,7 +1638,7 @@ the current buffer's major mode.  */)
   CHECK_BUFFER (buffer);
 
   if (STRINGP (XBUFFER (buffer)->name)
-      && strcmp (SDATA (XBUFFER (buffer)->name), "*scratch*") == 0)
+      && strcmp (SSDATA (XBUFFER (buffer)->name), "*scratch*") == 0)
     function = find_symbol_value (intern ("initial-major-mode"));
   else
     {
@@ -2092,7 +2066,7 @@ validate_region (register Lisp_Object *b, register Lisp_Object *e)
    and return the adjusted position.  */
 
 static int
-advance_to_char_boundary (int byte_pos)
+advance_to_char_boundary (EMACS_INT byte_pos)
 {
   int c;
 
@@ -2105,7 +2079,7 @@ advance_to_char_boundary (int byte_pos)
     {
       /* We should advance BYTE_POS only when C is a constituent of a
          multibyte sequence.  */
-      int orig_byte_pos = byte_pos;
+      EMACS_INT orig_byte_pos = byte_pos;
 
       do
 	{
@@ -2273,7 +2247,7 @@ current buffer is cleared.  */)
 {
   struct Lisp_Marker *tail, *markers;
   struct buffer *other;
-  int begv, zv;
+  EMACS_INT begv, zv;
   int narrowed = (BEG != BEGV || Z != ZV);
   int modified_p = !NILP (Fbuffer_modified_p (Qnil));
   Lisp_Object old_undo = current_buffer->undo_list;
@@ -2305,7 +2279,7 @@ current buffer is cleared.  */)
 
   if (NILP (flag))
     {
-      int pos, stop;
+      EMACS_INT pos, stop;
       unsigned char *p;
 
       /* Do this first, so it can use CHAR_TO_BYTE
@@ -2345,7 +2319,7 @@ current buffer is cleared.  */)
 	    {
 	      c = STRING_CHAR_AND_LENGTH (p, bytes);
 	      /* Delete all bytes for this 8-bit character but the
-		 last one, and change the last one to the charcter
+		 last one, and change the last one to the character
 		 code.  */
 	      bytes--;
 	      del_range_2 (pos, pos, pos + bytes, pos + bytes, 0);
@@ -2369,8 +2343,8 @@ current buffer is cleared.  */)
     }
   else
     {
-      int pt = PT;
-      int pos, stop;
+      EMACS_INT pt = PT;
+      EMACS_INT pos, stop;
       unsigned char *p, *pend;
 
       /* Be sure not to have a multibyte sequence striding over the GAP.
@@ -2386,7 +2360,7 @@ current buffer is cleared.  */)
 	  while (! CHAR_HEAD_P (*p) && p > BEG_ADDR) p--;
 	  if (LEADING_CODE_P (*p))
 	    {
-	      int new_gpt = GPT_BYTE - (GPT_ADDR - p);
+	      EMACS_INT new_gpt = GPT_BYTE - (GPT_ADDR - p);
 
 	      move_gap_both (new_gpt, new_gpt);
 	    }
@@ -2470,8 +2444,8 @@ current buffer is cleared.  */)
 	ZV = chars_in_text (BEG_ADDR, ZV_BYTE - BEG_BYTE) + BEG;
 
       {
-	int pt_byte = advance_to_char_boundary (PT_BYTE);
-	int pt;
+	EMACS_INT pt_byte = advance_to_char_boundary (PT_BYTE);
+	EMACS_INT pt;
 
 	if (pt_byte > GPT_BYTE)
 	  pt = chars_in_text (GAP_END_ADDR, pt_byte - GPT_BYTE) + GPT;
@@ -2642,13 +2616,13 @@ overlays_at (EMACS_INT pos, int extend, Lisp_Object **vec_ptr, int *len_ptr,
   int idx = 0;
   int len = *len_ptr;
   Lisp_Object *vec = *vec_ptr;
-  int next = ZV;
-  int prev = BEGV;
+  EMACS_INT next = ZV;
+  EMACS_INT prev = BEGV;
   int inhibit_storing = 0;
 
   for (tail = current_buffer->overlays_before; tail; tail = tail->next)
     {
-      int startpos, endpos;
+      EMACS_INT startpos, endpos;
 
       XSETMISC (overlay, tail);
 
@@ -2699,7 +2673,7 @@ overlays_at (EMACS_INT pos, int extend, Lisp_Object **vec_ptr, int *len_ptr,
 
   for (tail = current_buffer->overlays_after; tail; tail = tail->next)
     {
-      int startpos, endpos;
+      EMACS_INT startpos, endpos;
 
       XSETMISC (overlay, tail);
 
@@ -2773,22 +2747,23 @@ overlays_at (EMACS_INT pos, int extend, Lisp_Object **vec_ptr, int *len_ptr,
    But we still return the total number of overlays.  */
 
 static int
-overlays_in (int beg, int end, int extend, Lisp_Object **vec_ptr, int *len_ptr,
-	     int *next_ptr, int *prev_ptr)
+overlays_in (EMACS_INT beg, EMACS_INT end, int extend,
+	     Lisp_Object **vec_ptr, int *len_ptr,
+	     EMACS_INT *next_ptr, EMACS_INT *prev_ptr)
 {
   Lisp_Object overlay, ostart, oend;
   struct Lisp_Overlay *tail;
   int idx = 0;
   int len = *len_ptr;
   Lisp_Object *vec = *vec_ptr;
-  int next = ZV;
-  int prev = BEGV;
+  EMACS_INT next = ZV;
+  EMACS_INT prev = BEGV;
   int inhibit_storing = 0;
   int end_is_Z = end == Z;
 
   for (tail = current_buffer->overlays_before; tail; tail = tail->next)
     {
-      int startpos, endpos;
+      EMACS_INT startpos, endpos;
 
       XSETMISC (overlay, tail);
 
@@ -2838,7 +2813,7 @@ overlays_in (int beg, int end, int extend, Lisp_Object **vec_ptr, int *len_ptr,
 
   for (tail = current_buffer->overlays_after; tail; tail = tail->next)
     {
-      int startpos, endpos;
+      EMACS_INT startpos, endpos;
 
       XSETMISC (overlay, tail);
 
@@ -2897,8 +2872,8 @@ overlays_in (int beg, int end, int extend, Lisp_Object **vec_ptr, int *len_ptr,
 int
 mouse_face_overlay_overlaps (Lisp_Object overlay)
 {
-  int start = OVERLAY_POSITION (OVERLAY_START (overlay));
-  int end = OVERLAY_POSITION (OVERLAY_END (overlay));
+  EMACS_INT start = OVERLAY_POSITION (OVERLAY_START (overlay));
+  EMACS_INT end = OVERLAY_POSITION (OVERLAY_END (overlay));
   int n, i, size;
   Lisp_Object *v, tem;
 
@@ -2924,14 +2899,14 @@ mouse_face_overlay_overlaps (Lisp_Object overlay)
 
 /* Fast function to just test if we're at an overlay boundary.  */
 int
-overlay_touches_p (int pos)
+overlay_touches_p (EMACS_INT pos)
 {
   Lisp_Object overlay;
   struct Lisp_Overlay *tail;
 
   for (tail = current_buffer->overlays_before; tail; tail = tail->next)
     {
-      int endpos;
+      EMACS_INT endpos;
 
       XSETMISC (overlay ,tail);
       if (!OVERLAYP (overlay))
@@ -2946,7 +2921,7 @@ overlay_touches_p (int pos)
 
   for (tail = current_buffer->overlays_after; tail; tail = tail->next)
     {
-      int startpos;
+      EMACS_INT startpos;
 
       XSETMISC (overlay, tail);
       if (!OVERLAYP (overlay))
@@ -2964,7 +2939,7 @@ overlay_touches_p (int pos)
 struct sortvec
 {
   Lisp_Object overlay;
-  int beg, end;
+  EMACS_INT beg, end;
   int priority;
 };
 
@@ -3051,7 +3026,7 @@ struct sortstrlist
   struct sortstr *buf;	/* An array that expands as needed; never freed.  */
   int size;		/* Allocated length of that array.  */
   int used;		/* How much of the array is currently in use.  */
-  int bytes;		/* Total length of the strings in buf.  */
+  EMACS_INT bytes;		/* Total length of the strings in buf.  */
 };
 
 /* Buffers for storing information about the overlays touching a given
@@ -3062,7 +3037,7 @@ static struct sortstrlist overlay_heads, overlay_tails;
 static unsigned char *overlay_str_buf;
 
 /* Allocated length of overlay_str_buf.  */
-static int overlay_str_len;
+static EMACS_INT overlay_str_len;
 
 /* A comparison function suitable for passing to qsort.  */
 static int
@@ -3080,7 +3055,7 @@ cmp_for_strings (const void *as1, const void *as2)
 static void
 record_overlay_string (struct sortstrlist *ssl, Lisp_Object str, Lisp_Object str2, Lisp_Object pri, int size)
 {
-  int nbytes;
+  EMACS_INT nbytes;
 
   if (ssl->used == ssl->size)
     {
@@ -3133,12 +3108,12 @@ record_overlay_string (struct sortstrlist *ssl, Lisp_Object str, Lisp_Object str
    PSTR, if that variable is non-null.  The string may be overwritten by
    subsequent calls.  */
 
-int
+EMACS_INT
 overlay_strings (EMACS_INT pos, struct window *w, unsigned char **pstr)
 {
   Lisp_Object overlay, window, str;
   struct Lisp_Overlay *ov;
-  int startpos, endpos;
+  EMACS_INT startpos, endpos;
   int multibyte = ! NILP (current_buffer->enable_multibyte_characters);
 
   overlay_heads.used = overlay_heads.bytes = 0;
@@ -3208,9 +3183,9 @@ overlay_strings (EMACS_INT pos, struct window *w, unsigned char **pstr)
   if (overlay_heads.bytes || overlay_tails.bytes)
     {
       Lisp_Object tem;
-      int i;
+      EMACS_INT i;
       unsigned char *p;
-      int total = overlay_heads.bytes + overlay_tails.bytes;
+      EMACS_INT total = overlay_heads.bytes + overlay_tails.bytes;
 
       if (total > overlay_str_len)
 	{
@@ -3221,7 +3196,7 @@ overlay_strings (EMACS_INT pos, struct window *w, unsigned char **pstr)
       p = overlay_str_buf;
       for (i = overlay_tails.used; --i >= 0;)
 	{
-	  int nbytes;
+	  EMACS_INT nbytes;
 	  tem = overlay_tails.buf[i].string;
 	  nbytes = copy_text (SDATA (tem), p,
 			      SBYTES (tem),
@@ -3230,7 +3205,7 @@ overlay_strings (EMACS_INT pos, struct window *w, unsigned char **pstr)
 	}
       for (i = 0; i < overlay_heads.used; ++i)
 	{
-	  int nbytes;
+	  EMACS_INT nbytes;
 	  tem = overlay_heads.buf[i].string;
 	  nbytes = copy_text (SDATA (tem), p,
 			      SBYTES (tem),
@@ -3295,7 +3270,7 @@ recenter_overlay_lists (struct buffer *buf, EMACS_INT pos)
       if (OVERLAY_POSITION (end) > pos)
 	{
 	  /* OVERLAY needs to be moved.  */
-	  int where = OVERLAY_POSITION (beg);
+	  EMACS_INT where = OVERLAY_POSITION (beg);
 	  struct Lisp_Overlay *other, *other_prev;
 
 	  /* Splice the cons cell TAIL out of overlays_before.  */
@@ -3368,7 +3343,7 @@ recenter_overlay_lists (struct buffer *buf, EMACS_INT pos)
       if (OVERLAY_POSITION (end) <= pos)
 	{
 	  /* OVERLAY needs to be moved.  */
-	  int where = OVERLAY_POSITION (end);
+	  EMACS_INT where = OVERLAY_POSITION (end);
 	  struct Lisp_Overlay *other, *other_prev;
 
 	  /* Splice the cons cell TAIL out of overlays_after.  */
@@ -3440,7 +3415,7 @@ adjust_overlays_for_delete (EMACS_INT pos, EMACS_INT length)
    Such an overlay might even have negative size at this point.
    If so, we'll make the overlay empty. */
 void
-fix_start_end_in_overlays (register int start, register int end)
+fix_start_end_in_overlays (register EMACS_INT start, register EMACS_INT end)
 {
   Lisp_Object overlay;
   struct Lisp_Overlay *before_list, *after_list;
@@ -3452,7 +3427,7 @@ fix_start_end_in_overlays (register int start, register int end)
      current_buffer->overlays_before or overlays_after, depending
      which loop we're in.  */
   struct Lisp_Overlay *tail, *parent;
-  int startpos, endpos;
+  EMACS_INT startpos, endpos;
 
   /* This algorithm shifts links around instead of consing and GCing.
      The loop invariant is that before_list (resp. after_list) is a
@@ -3753,7 +3728,7 @@ modify_overlay (struct buffer *buf, EMACS_INT start, EMACS_INT end)
 {
   if (start > end)
     {
-      int temp = start;
+      EMACS_INT temp = start;
       start = end;
       end = temp;
     }
@@ -3776,8 +3751,6 @@ modify_overlay (struct buffer *buf, EMACS_INT start, EMACS_INT end)
 }
 
 
-Lisp_Object Fdelete_overlay (Lisp_Object overlay);
-
 static struct Lisp_Overlay *
 unchain_overlay (struct Lisp_Overlay *list, struct Lisp_Overlay *overlay)
 {
@@ -3844,8 +3817,8 @@ buffer.  */)
       /* Redisplay where the overlay was.  */
       if (!NILP (obuffer))
 	{
-	  int o_beg;
-	  int o_end;
+	  EMACS_INT o_beg;
+	  EMACS_INT o_end;
 
 	  o_beg = OVERLAY_POSITION (OVERLAY_START (overlay));
 	  o_end = OVERLAY_POSITION (OVERLAY_END (overlay));
@@ -3859,7 +3832,7 @@ buffer.  */)
   else
     /* Redisplay the area the overlay has just left, or just enclosed.  */
     {
-      int o_beg, o_end;
+      EMACS_INT o_beg, o_end;
 
       o_beg = OVERLAY_POSITION (OVERLAY_START (overlay));
       o_end = OVERLAY_POSITION (OVERLAY_END (overlay));
@@ -4037,7 +4010,7 @@ end of the buffer.  */)
   /* Put all the overlays we want in a vector in overlay_vec.
      Store the length in len.  */
   noverlays = overlays_in (XINT (beg), XINT (end), 1, &overlay_vec, &len,
-			   (int *) 0, (int *) 0);
+			   NULL, NULL);
 
   /* Make a list of them all.  */
   result = Flist (noverlays, overlay_vec);
@@ -4280,7 +4253,7 @@ report_overlay_modification (Lisp_Object start, Lisp_Object end, int after,
       last_overlay_modification_hooks_used = 0;
       for (tail = current_buffer->overlays_before; tail; tail = tail->next)
 	{
-	  int startpos, endpos;
+	  EMACS_INT startpos, endpos;
 	  Lisp_Object ostart, oend;
 
 	  XSETMISC (overlay, tail);
@@ -4317,7 +4290,7 @@ report_overlay_modification (Lisp_Object start, Lisp_Object end, int after,
 
       for (tail = current_buffer->overlays_after; tail; tail = tail->next)
 	{
-	  int startpos, endpos;
+	  EMACS_INT startpos, endpos;
 	  Lisp_Object ostart, oend;
 
 	  XSETMISC (overlay, tail);
@@ -4409,7 +4382,7 @@ evaporate_overlays (EMACS_INT pos)
   if (pos <= current_buffer->overlay_center)
     for (tail = current_buffer->overlays_before; tail; tail = tail->next)
       {
-	int endpos;
+	EMACS_INT endpos;
 	XSETMISC (overlay, tail);
 	endpos = OVERLAY_POSITION (OVERLAY_END (overlay));
 	if (endpos < pos)
@@ -4421,7 +4394,7 @@ evaporate_overlays (EMACS_INT pos)
   else
     for (tail = current_buffer->overlays_after; tail; tail = tail->next)
       {
-	int startpos;
+	EMACS_INT startpos;
 	XSETMISC (overlay, tail);
 	startpos = OVERLAY_POSITION (OVERLAY_START (overlay));
 	if (startpos > pos)
@@ -5256,7 +5229,7 @@ init_buffer (void)
 	 because of the ange-ftp completion handler.
 	 However, it is not necessary to turn / into /:/.
 	 So avoid doing that.  */
-      && strcmp ("/", SDATA (current_buffer->directory)))
+      && strcmp ("/", SSDATA (current_buffer->directory)))
     current_buffer->directory
       = concat2 (build_string ("/:"), current_buffer->directory);
 
@@ -5367,147 +5340,147 @@ syms_of_buffer (void)
   /* All these use DEFVAR_LISP_NOPRO because the slots in
      buffer_defaults will all be marked via Vbuffer_defaults.  */
 
-  DEFVAR_LISP_NOPRO ("default-mode-line-format",
-		     &buffer_defaults.mode_line_format,
-		     doc: /* Default value of `mode-line-format' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-mode-line-format",
+			  mode_line_format,
+			  doc: /* Default value of `mode-line-format' for buffers that don't override it.
 This is the same as (default-value 'mode-line-format).  */);
 
-  DEFVAR_LISP_NOPRO ("default-header-line-format",
-		     &buffer_defaults.header_line_format,
-		     doc: /* Default value of `header-line-format' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-header-line-format",
+			  header_line_format,
+			  doc: /* Default value of `header-line-format' for buffers that don't override it.
 This is the same as (default-value 'header-line-format).  */);
 
-  DEFVAR_LISP_NOPRO ("default-cursor-type", &buffer_defaults.cursor_type,
-		     doc: /* Default value of `cursor-type' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-cursor-type", cursor_type,
+			  doc: /* Default value of `cursor-type' for buffers that don't override it.
 This is the same as (default-value 'cursor-type).  */);
 
-  DEFVAR_LISP_NOPRO ("default-line-spacing",
-		     &buffer_defaults.extra_line_spacing,
-		     doc: /* Default value of `line-spacing' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-line-spacing",
+			  extra_line_spacing,
+			  doc: /* Default value of `line-spacing' for buffers that don't override it.
 This is the same as (default-value 'line-spacing).  */);
 
-  DEFVAR_LISP_NOPRO ("default-cursor-in-non-selected-windows",
-		     &buffer_defaults.cursor_in_non_selected_windows,
-		     doc: /* Default value of `cursor-in-non-selected-windows'.
+  DEFVAR_BUFFER_DEFAULTS ("default-cursor-in-non-selected-windows",
+			  cursor_in_non_selected_windows,
+			  doc: /* Default value of `cursor-in-non-selected-windows'.
 This is the same as (default-value 'cursor-in-non-selected-windows).  */);
 
-  DEFVAR_LISP_NOPRO ("default-abbrev-mode",
-		     &buffer_defaults.abbrev_mode,
-		     doc: /* Default value of `abbrev-mode' for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-abbrev-mode",
+			  abbrev_mode,
+			  doc: /* Default value of `abbrev-mode' for buffers that do not override it.
 This is the same as (default-value 'abbrev-mode).  */);
 
-  DEFVAR_LISP_NOPRO ("default-ctl-arrow",
-		     &buffer_defaults.ctl_arrow,
-		     doc: /* Default value of `ctl-arrow' for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-ctl-arrow",
+			  ctl_arrow,
+			  doc: /* Default value of `ctl-arrow' for buffers that do not override it.
 This is the same as (default-value 'ctl-arrow).  */);
 
-  DEFVAR_LISP_NOPRO ("default-enable-multibyte-characters",
-                     &buffer_defaults.enable_multibyte_characters,
-                     doc: /* *Default value of `enable-multibyte-characters' for buffers not overriding it.
+  DEFVAR_BUFFER_DEFAULTS ("default-enable-multibyte-characters",
+			  enable_multibyte_characters,
+			  doc: /* *Default value of `enable-multibyte-characters' for buffers not overriding it.
 This is the same as (default-value 'enable-multibyte-characters).  */);
 
-  DEFVAR_LISP_NOPRO ("default-buffer-file-coding-system",
-                     &buffer_defaults.buffer_file_coding_system,
-                     doc: /* Default value of `buffer-file-coding-system' for buffers not overriding it.
+  DEFVAR_BUFFER_DEFAULTS ("default-buffer-file-coding-system",
+			  buffer_file_coding_system,
+			  doc: /* Default value of `buffer-file-coding-system' for buffers not overriding it.
 This is the same as (default-value 'buffer-file-coding-system).  */);
 
-  DEFVAR_LISP_NOPRO ("default-truncate-lines",
-		     &buffer_defaults.truncate_lines,
-		     doc: /* Default value of `truncate-lines' for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-truncate-lines",
+			  truncate_lines,
+			  doc: /* Default value of `truncate-lines' for buffers that do not override it.
 This is the same as (default-value 'truncate-lines).  */);
 
-  DEFVAR_LISP_NOPRO ("default-fill-column",
-		     &buffer_defaults.fill_column,
-		     doc: /* Default value of `fill-column' for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-fill-column",
+			  fill_column,
+			  doc: /* Default value of `fill-column' for buffers that do not override it.
 This is the same as (default-value 'fill-column).  */);
 
-  DEFVAR_LISP_NOPRO ("default-left-margin",
-		     &buffer_defaults.left_margin,
-		     doc: /* Default value of `left-margin' for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-left-margin",
+			  left_margin,
+			  doc: /* Default value of `left-margin' for buffers that do not override it.
 This is the same as (default-value 'left-margin).  */);
 
-  DEFVAR_LISP_NOPRO ("default-tab-width",
-		     &buffer_defaults.tab_width,
-		     doc: /* Default value of `tab-width' for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-tab-width",
+			  tab_width,
+			  doc: /* Default value of `tab-width' for buffers that do not override it.
 This is the same as (default-value 'tab-width).  */);
 
-  DEFVAR_LISP_NOPRO ("default-case-fold-search",
-		     &buffer_defaults.case_fold_search,
-		     doc: /* Default value of `case-fold-search' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-case-fold-search",
+			  case_fold_search,
+			  doc: /* Default value of `case-fold-search' for buffers that don't override it.
 This is the same as (default-value 'case-fold-search).  */);
 
 #ifdef DOS_NT
-  DEFVAR_LISP_NOPRO ("default-buffer-file-type",
-		     &buffer_defaults.buffer_file_type,
-		     doc: /* Default file type for buffers that do not override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-buffer-file-type",
+			  buffer_file_type,
+			  doc: /* Default file type for buffers that do not override it.
 This is the same as (default-value 'buffer-file-type).
 The file type is nil for text, t for binary.  */);
 #endif
 
-  DEFVAR_LISP_NOPRO ("default-left-margin-width",
-		     &buffer_defaults.left_margin_cols,
-		     doc: /* Default value of `left-margin-width' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-left-margin-width",
+			  left_margin_cols,
+			  doc: /* Default value of `left-margin-width' for buffers that don't override it.
 This is the same as (default-value 'left-margin-width).  */);
 
-  DEFVAR_LISP_NOPRO ("default-right-margin-width",
-		     &buffer_defaults.right_margin_cols,
-		     doc: /* Default value of `right-margin-width' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-right-margin-width",
+			  right_margin_cols,
+			  doc: /* Default value of `right-margin-width' for buffers that don't override it.
 This is the same as (default-value 'right-margin-width).  */);
 
-  DEFVAR_LISP_NOPRO ("default-left-fringe-width",
-		     &buffer_defaults.left_fringe_width,
-		     doc: /* Default value of `left-fringe-width' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-left-fringe-width",
+			  left_fringe_width,
+			  doc: /* Default value of `left-fringe-width' for buffers that don't override it.
 This is the same as (default-value 'left-fringe-width).  */);
 
-  DEFVAR_LISP_NOPRO ("default-right-fringe-width",
-		     &buffer_defaults.right_fringe_width,
-		     doc: /* Default value of `right-fringe-width' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-right-fringe-width",
+			  right_fringe_width,
+			  doc: /* Default value of `right-fringe-width' for buffers that don't override it.
 This is the same as (default-value 'right-fringe-width).  */);
 
-  DEFVAR_LISP_NOPRO ("default-fringes-outside-margins",
-		     &buffer_defaults.fringes_outside_margins,
-		     doc: /* Default value of `fringes-outside-margins' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-fringes-outside-margins",
+			  fringes_outside_margins,
+			  doc: /* Default value of `fringes-outside-margins' for buffers that don't override it.
 This is the same as (default-value 'fringes-outside-margins).  */);
 
-  DEFVAR_LISP_NOPRO ("default-scroll-bar-width",
-		     &buffer_defaults.scroll_bar_width,
-		     doc: /* Default value of `scroll-bar-width' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-scroll-bar-width",
+			  scroll_bar_width,
+			  doc: /* Default value of `scroll-bar-width' for buffers that don't override it.
 This is the same as (default-value 'scroll-bar-width).  */);
 
-  DEFVAR_LISP_NOPRO ("default-vertical-scroll-bar",
-		     &buffer_defaults.vertical_scroll_bar_type,
-		     doc: /* Default value of `vertical-scroll-bar' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-vertical-scroll-bar",
+			  vertical_scroll_bar_type,
+			  doc: /* Default value of `vertical-scroll-bar' for buffers that don't override it.
 This is the same as (default-value 'vertical-scroll-bar).  */);
 
-  DEFVAR_LISP_NOPRO ("default-indicate-empty-lines",
-		     &buffer_defaults.indicate_empty_lines,
-		     doc: /* Default value of `indicate-empty-lines' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-indicate-empty-lines",
+			  indicate_empty_lines,
+			  doc: /* Default value of `indicate-empty-lines' for buffers that don't override it.
 This is the same as (default-value 'indicate-empty-lines).  */);
 
-  DEFVAR_LISP_NOPRO ("default-indicate-buffer-boundaries",
-		     &buffer_defaults.indicate_buffer_boundaries,
-		     doc: /* Default value of `indicate-buffer-boundaries' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-indicate-buffer-boundaries",
+			  indicate_buffer_boundaries,
+			  doc: /* Default value of `indicate-buffer-boundaries' for buffers that don't override it.
 This is the same as (default-value 'indicate-buffer-boundaries).  */);
 
-  DEFVAR_LISP_NOPRO ("default-fringe-indicator-alist",
-		     &buffer_defaults.fringe_indicator_alist,
-		     doc: /* Default value of `fringe-indicator-alist' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-fringe-indicator-alist",
+			  fringe_indicator_alist,
+			  doc: /* Default value of `fringe-indicator-alist' for buffers that don't override it.
 This is the same as (default-value 'fringe-indicator-alist').  */);
 
-  DEFVAR_LISP_NOPRO ("default-fringe-cursor-alist",
-		     &buffer_defaults.fringe_cursor_alist,
-		     doc: /* Default value of `fringe-cursor-alist' for buffers that don't override it.
+  DEFVAR_BUFFER_DEFAULTS ("default-fringe-cursor-alist",
+			  fringe_cursor_alist,
+			  doc: /* Default value of `fringe-cursor-alist' for buffers that don't override it.
 This is the same as (default-value 'fringe-cursor-alist').  */);
 
-  DEFVAR_LISP_NOPRO ("default-scroll-up-aggressively",
-		     &buffer_defaults.scroll_up_aggressively,
-		     doc: /* Default value of `scroll-up-aggressively'.
+  DEFVAR_BUFFER_DEFAULTS ("default-scroll-up-aggressively",
+			  scroll_up_aggressively,
+			  doc: /* Default value of `scroll-up-aggressively'.
 This value applies in buffers that don't have their own local values.
 This is the same as (default-value 'scroll-up-aggressively).  */);
 
-  DEFVAR_LISP_NOPRO ("default-scroll-down-aggressively",
-		     &buffer_defaults.scroll_down_aggressively,
-		     doc: /* Default value of `scroll-down-aggressively'.
+  DEFVAR_BUFFER_DEFAULTS ("default-scroll-down-aggressively",
+			  scroll_down_aggressively,
+			  doc: /* Default value of `scroll-down-aggressively'.
 This value applies in buffers that don't have their own local values.
 This is the same as (default-value 'scroll-down-aggressively).  */);
 
@@ -5572,8 +5545,8 @@ A string is printed verbatim in the mode line except for %-constructs:
   %% -- print %.   %- -- print infinitely many dashes.
 Decimal digits after the % specify field width to which to pad.  */);
 
-  DEFVAR_LISP_NOPRO ("default-major-mode", &buffer_defaults.major_mode,
-		     doc: /* *Value of `major-mode' for new buffers.  */);
+  DEFVAR_BUFFER_DEFAULTS ("default-major-mode", major_mode,
+			  doc: /* *Value of `major-mode' for new buffers.  */);
 
   DEFVAR_PER_BUFFER ("major-mode", &current_buffer->major_mode,
 		     make_number (Lisp_Symbol),
@@ -5599,7 +5572,8 @@ Format with `format-mode-line' to produce a string value.  */);
 		     doc: /* Local (mode-specific) abbrev table of current buffer.  */);
 
   DEFVAR_PER_BUFFER ("abbrev-mode", &current_buffer->abbrev_mode, Qnil,
-		     doc: /* Non-nil turns on automatic expansion of abbrevs as they are inserted.  */);
+		     doc: /*  Non-nil if Abbrev mode is enabled.
+Use the command `abbrev-mode' to change this variable.  */);
 
   DEFVAR_PER_BUFFER ("case-fold-search", &current_buffer->case_fold_search,
 		     Qnil,
@@ -5947,7 +5921,7 @@ between 0.0 and 1.0, inclusive.  */);
     "Don't ask.");
 */
 
-  DEFVAR_LISP ("before-change-functions", &Vbefore_change_functions,
+  DEFVAR_LISP ("before-change-functions", Vbefore_change_functions,
 	       doc: /* List of functions to call before each text change.
 Two arguments are passed to each function: the positions of
 the beginning and end of the range of old text to be changed.
@@ -5956,17 +5930,14 @@ No information is given about the length of the text after the change.
 
 Buffer changes made while executing the `before-change-functions'
 don't call any before-change or after-change functions.
-That's because these variables are temporarily set to nil.
-As a result, a hook function cannot straightforwardly alter the
-value of these variables.  See the Emacs Lisp manual for a way of
-accomplishing an equivalent result by using other variables.
+That's because `inhibit-modification-hooks' is temporarily set non-nil.
 
 If an unhandled error happens in running these functions,
 the variable's value remains nil.  That prevents the error
 from happening repeatedly and making Emacs nonfunctional.  */);
   Vbefore_change_functions = Qnil;
 
-  DEFVAR_LISP ("after-change-functions", &Vafter_change_functions,
+  DEFVAR_LISP ("after-change-functions", Vafter_change_functions,
 	       doc: /* List of functions to call after each text change.
 Three arguments are passed to each function: the positions of
 the beginning and end of the range of changed text,
@@ -5977,17 +5948,14 @@ and the post-change beginning and end are at the same place.)
 
 Buffer changes made while executing the `after-change-functions'
 don't call any before-change or after-change functions.
-That's because these variables are temporarily set to nil.
-As a result, a hook function cannot straightforwardly alter the
-value of these variables.  See the Emacs Lisp manual for a way of
-accomplishing an equivalent result by using other variables.
+That's because `inhibit-modification-hooks' is temporarily set non-nil.
 
 If an unhandled error happens in running these functions,
 the variable's value remains nil.  That prevents the error
 from happening repeatedly and making Emacs nonfunctional.  */);
   Vafter_change_functions = Qnil;
 
-  DEFVAR_LISP ("first-change-hook", &Vfirst_change_hook,
+  DEFVAR_LISP ("first-change-hook", Vfirst_change_hook,
 	       doc: /* A list of functions to call before changing a buffer which is unmodified.
 The functions are run using the `run-hooks' function.  */);
   Vfirst_change_hook = Qnil;
@@ -6102,14 +6070,28 @@ The function `set-window-buffer' updates this variable
 to the value obtained by calling `current-time'.
 If the buffer has never been shown in a window, the value is nil.  */);
 
-  DEFVAR_LISP ("transient-mark-mode", &Vtransient_mark_mode,
-	       doc: /* */);
-  Vtransient_mark_mode = Qnil;
-  /* The docstring is in simple.el.  If we put it here, it would be
-     overwritten when transient-mark-mode is defined using
-     define-minor-mode.  */
+  DEFVAR_LISP ("transient-mark-mode", Vtransient_mark_mode,
+	       doc: /*  Non-nil if Transient Mark mode is enabled.
+See the command `transient-mark-mode' for a description of this minor mode.
 
-  DEFVAR_LISP ("inhibit-read-only", &Vinhibit_read_only,
+Non-nil also enables highlighting of the region whenever the mark is active.
+The variable `highlight-nonselected-windows' controls whether to highlight
+all windows or just the selected window.
+
+Lisp programs may give this variable certain special values:
+
+- A value of `lambda' enables Transient Mark mode temporarily.
+  It is disabled again after any subsequent action that would
+  normally deactivate the mark (e.g. buffer modification).
+
+- A value of (only . OLDVAL) enables Transient Mark mode
+  temporarily.  After any subsequent point motion command that is
+  not shift-translated, or any other action that would normally
+  deactivate the mark (e.g. buffer modification), the value of
+  `transient-mark-mode' is set to OLDVAL.  */);
+  Vtransient_mark_mode = Qnil;
+
+  DEFVAR_LISP ("inhibit-read-only", Vinhibit_read_only,
 	       doc: /* *Non-nil means disregard read-only status of buffers or characters.
 If the value is t, disregard `buffer-read-only' and all `read-only'
 text properties.  If the value is a list, disregard `buffer-read-only'
@@ -6145,16 +6127,20 @@ to the default frame line height.  A value of nil means add no extra space.  */)
 
   DEFVAR_PER_BUFFER ("cursor-in-non-selected-windows",
 		     &current_buffer->cursor_in_non_selected_windows, Qnil,
-		     doc: /* *Cursor type to display in non-selected windows.
-The value t means to use hollow box cursor.  See `cursor-type' for other values.  */);
+		     doc: /* *Non-nil means show a cursor in non-selected windows.
+If nil, only shows a cursor in the selected window.
+If t, displays a cursor related to the usual cursor type
+\(a solid box becomes hollow, a bar becomes a narrower bar).
+You can also specify the cursor type as in the `cursor-type' variable.
+Use Custom to set this variable and update the display."  */);
 
-  DEFVAR_LISP ("kill-buffer-query-functions", &Vkill_buffer_query_functions,
+  DEFVAR_LISP ("kill-buffer-query-functions", Vkill_buffer_query_functions,
 	       doc: /* List of functions called with no args to query before killing a buffer.
 The buffer being killed will be current while the functions are running.
 If any of them returns nil, the buffer is not killed.  */);
   Vkill_buffer_query_functions = Qnil;
 
-  DEFVAR_LISP ("change-major-mode-hook", &Vchange_major_mode_hook,
+  DEFVAR_LISP ("change-major-mode-hook", Vchange_major_mode_hook,
 	       doc: /* Normal hook run before changing the major mode of a buffer.
 The function `kill-all-local-variables' runs this before doing anything else.  */);
   Vchange_major_mode_hook = Qnil;
@@ -6222,6 +6208,3 @@ keys_of_buffer (void)
      initialized when that function gets called.  */
   Fput (intern_c_string ("erase-buffer"), Qdisabled, Qt);
 }
-
-/* arch-tag: e48569bf-69a9-4b65-a23b-8e68769436e1
-   (do not change this comment) */

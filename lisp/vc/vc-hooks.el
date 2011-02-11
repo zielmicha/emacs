@@ -1,11 +1,10 @@
 ;;; vc-hooks.el --- resident support for version-control
 
-;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001,
-;;   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1992-1996, 1998-2011  Free Software Foundation, Inc.
 
 ;; Author:     FSF (see vc.el for full credits)
 ;; Maintainer: Andre Spiegel <spiegel@gnu.org>
+;; Package: vc
 
 ;; This file is part of GNU Emacs.
 
@@ -47,9 +46,6 @@
 vc-BACKEND-master-templates.  To enable or disable VC for a given
 BACKEND, use `vc-handled-backends'."
  "21.1")
-
-(defvar vc-header-alist ())
-(make-obsolete-variable 'vc-header-alist 'vc-BACKEND-header "21.1")
 
 (defcustom vc-ignore-dir-regexp
   ;; Stop SMB, automounter, AFS, and DFS host lookups.
@@ -814,6 +810,9 @@ Format:
   \"BACKEND-REV\"        if the file is up-to-date
   \"BACKEND:REV\"        if the file is edited (or locked by the calling user)
   \"BACKEND:LOCKER:REV\" if the file is locked by somebody else
+  \"BACKEND@REV\"        if the file was locally added
+  \"BACKEND!REV\"        if the file contains conflicts or was removed
+  \"BACKEND?REV\"        if the file is under VC, but is missing
 
 This function assumes that the file is registered."
   (let* ((backend-name (symbol-name backend))
@@ -1051,5 +1050,4 @@ current, and kill the buffer that visits the link."
 
 (provide 'vc-hooks)
 
-;; arch-tag: 2e5a6fa7-1d30-48e2-8bd0-e3d335f04f32
 ;;; vc-hooks.el ends here

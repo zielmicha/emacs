@@ -1,10 +1,10 @@
 ;;; cl-extra.el --- Common Lisp features, part 2
 
-;; Copyright (C) 1993, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-;;   2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 2000-2011  Free Software Foundation, Inc.
 
 ;; Author: Dave Gillespie <daveg@synaptics.com>
 ;; Keywords: extensions
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -825,5 +825,4 @@ This also does some trivial optimizations to make the form prettier."
 ;; generated-autoload-file: "cl-loaddefs.el"
 ;; End:
 
-;; arch-tag: bcd03437-0871-43fb-a8f1-ad0e0b5427ed
 ;;; cl-extra.el ends here

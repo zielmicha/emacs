@@ -1,9 +1,9 @@
 ;;; ediff-util.el --- the core commands and utilities of ediff
 
-;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-;;   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1994-2011  Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
+;; Package: ediff
 
 ;; This file is part of GNU Emacs.
 
@@ -92,6 +92,7 @@ This mode is entered through one of the following commands:
 
 Commands:
 \\{ediff-mode-map}"
+  ;; FIXME: Use define-derived-mode.
   (kill-all-local-variables)
   (setq major-mode 'ediff-mode)
   (setq mode-name "Ediff")
@@ -309,7 +310,7 @@ to invocation.")
 	    ediff-word-mode-job (ediff-word-mode-job))
 
       ;; Don't delete variants in case of ediff-buffer-* jobs without asking.
-      ;; This is because one may loose work---dangerous.
+      ;; This is because one may lose work---dangerous.
       (if (string-match "buffer" (symbol-name ediff-job-name))
 	  (setq ediff-keep-variants t))
 
@@ -3993,7 +3994,7 @@ byte-compilation may produce output like this:
 	   ........................
        While compiling the end of the data:
 	 ** The following functions are not known to be defined:
-	   ediff-valid-color-p, ediff-set-face,
+	   xxx, yyy
 	   ........................
 
 These are NOT errors, but inevitable warnings, which ought to be ignored.
@@ -4287,5 +4288,4 @@ Mail anyway? (y or n) ")
 ;; eval: (put 'ediff-with-current-buffer 'edebug-form-spec '(form body))
 ;; End:
 
-;; arch-tag: f51099b6-ef4b-470f-88a1-3a0e0b03a879
 ;;; ediff-util.el ends here

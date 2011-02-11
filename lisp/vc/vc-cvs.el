@@ -1,10 +1,10 @@
 ;;; vc-cvs.el --- non-resident support for CVS version-control
 
-;; Copyright (C) 1995, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-;;   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1998-2011 Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  Andre Spiegel <spiegel@gnu.org>
+;; Package: vc
 
 ;; This file is part of GNU Emacs.
 
@@ -91,9 +91,9 @@ If nil, use the value of `vc-diff-switches'.  If t, use no switches."
   :version "21.1"
   :group 'vc)
 
-(defcustom vc-cvs-header (or (cdr (assoc 'CVS vc-header-alist)) '("\$Id\$"))
+(defcustom vc-cvs-header '("\$Id\$")
   "Header keywords to be inserted by `vc-insert-headers'."
-  :version "21.1"
+  :version "24.1"     ; no longer consult the obsolete vc-header-alist
   :type '(repeat string)
   :group 'vc)
 
@@ -313,7 +313,7 @@ its parents."
                   (directory-file-name dir))))
     (eq dir t)))
 
-(defun vc-cvs-checkin (files rev comment  &optional extra-args-ignored)
+(defun vc-cvs-checkin (files rev comment)
   "CVS-specific version of `vc-backend-checkin'."
   (unless (or (not rev) (vc-cvs-valid-revision-number-p rev))
     (if (not (vc-cvs-valid-symbolic-tag-name-p rev))
@@ -1209,5 +1209,4 @@ is non-nil."
 
 (provide 'vc-cvs)
 
-;; arch-tag: 60e1402a-aa53-4607-927a-cf74f144b432
 ;;; vc-cvs.el ends here

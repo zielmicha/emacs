@@ -1,6 +1,5 @@
 /* Functions taken directly from X sources for use with the Microsoft W32 API.
-   Copyright (C) 1989, 1992, 1993, 1994, 1995, 1999, 2001, 2002, 2003,
-                 2004, 2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1989, 1992-1995, 1999, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -408,7 +407,6 @@ XParseGeometry (char *string,
 		return (0);
 	      strind = nextCharacter;
 	      mask |= YNegative;
-
 	    }
 	  else
 	    {
@@ -422,7 +420,7 @@ XParseGeometry (char *string,
 	}
     }
 
-  /* If strind isn't at the end of the string the it's an invalid
+  /* If strind isn't at the end of the string then it's an invalid
      geometry specification. */
 
   if (*strind != '\0') return (0);
@@ -444,5 +442,3 @@ x_sync (void *f)
 {
 }
 
-/* arch-tag: 4fab3695-4ad3-4cc6-a2b1-fd2c67dc46be
-   (do not change this comment) */

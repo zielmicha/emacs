@@ -1,7 +1,7 @@
 /* This file is the configuration file for Linux-based GNU systems
 
-Copyright (C) 1985, 1986, 1992, 1994, 1996, 1999, 2001, 2002, 2003, 2004,
-  2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+Copyright (C) 1985-1986, 1992, 1994, 1996, 1999, 2001-2011
+  Free Software Foundation, Inc.
 
 This file was put together by Michael K. Johnson and Rik Faith.
 
@@ -79,10 +79,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #define FIRST_PTY_LETTER 'p'
 
 #endif  /* not HAVE_GRANTPT */
-
-/*  Define HAVE_TERMIOS if the system provides POSIX-style
-    functions and macros for terminal control.  */
-#define HAVE_TERMIOS
 
 /* Define HAVE_PTYS if the system supports pty devices.  */
 #define HAVE_PTYS
@@ -163,6 +159,3 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
   } while (0)
 #endif
 #endif
-
-/* arch-tag: 6244ea2a-abd0-44ec-abec-ff3dcc9afea9
-   (do not change this comment) */

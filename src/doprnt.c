@@ -1,8 +1,7 @@
 /* Output like sprintf to a buffer of specified size.
    Also takes args differently: pass one pointer to an array of strings
    in addition to the format string which is separate.
-   Copyright (C) 1985, 2001, 2002, 2003, 2004, 2005,
-                 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1985, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -29,24 +28,18 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <float.h>
 #endif
 
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
 
 #include "lisp.h"
-
-#ifndef DBL_MAX_10_EXP
-#define DBL_MAX_10_EXP 308 /* IEEE double */
-#endif
 
 /* Since we use the macro CHAR_HEAD_P, we have to include this, but
    don't have to include others because CHAR_HEAD_P does not contains
    another macro.  */
 #include "character.h"
+
+#ifndef DBL_MAX_10_EXP
+#define DBL_MAX_10_EXP 308 /* IEEE double */
+#endif
 
 /* Generate output from a format-spec FORMAT,
    terminated at position FORMAT_END.
@@ -58,7 +51,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
    String arguments are passed as C strings.
    Integers are passed as C integers.  */
 
-int
+EMACS_INT
 doprnt (char *buffer, register int bufsize, const char *format,
 	const char *format_end, va_list ap)
 {
@@ -100,7 +93,7 @@ doprnt (char *buffer, register int bufsize, const char *format,
       if (*fmt == '%')	/* Check for a '%' character */
 	{
 	  unsigned size_bound = 0;
-	  int width;		/* Columns occupied by STRING.  */
+	  EMACS_INT width;  /* Columns occupied by STRING.  */
 
 	  fmt++;
 	  /* Copy this one %-spec into fmtcpy.  */
@@ -285,5 +278,3 @@ doprnt (char *buffer, register int bufsize, const char *format,
   return bufptr - buffer;
 }
 
-/* arch-tag: aa0ab528-7c5f-4c73-894c-aa2526a1efb3
-   (do not change this comment) */

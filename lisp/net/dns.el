@@ -1,7 +1,6 @@
 ;;; dns.el --- Domain Name Service lookups
 
-;; Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 2002-2011  Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: network comm
@@ -151,7 +150,7 @@ If TCP-P, the first two bytes of the package with be the length field."
       (lsh (if (dns-get 'truncated-p spec) 1 0) -1)
       (lsh (if (dns-get 'recursion-desired-p spec) 1 0) 0)))
     (dns-write-bytes
-     (cond 
+     (cond
       ((eq (dns-get 'response-code spec) 'no-error) 0)
       ((eq (dns-get 'response-code spec) 'format-error) 1)
       ((eq (dns-get 'response-code spec) 'server-failure) 2)
@@ -253,8 +252,8 @@ If TCP-P, the first two bytes of the package with be the length field."
       (nreverse spec))))
 
 (defun dns-read-int32 ()
-  ;; Full 32 bit Integers can't be handled by Emacs.  If we use
-  ;; floats, it works.
+  ;; Full 32 bit Integers can't be handled by 32-bit Emacsen.  If we
+  ;; use floats, it works.
   (format "%.0f" (+ (* (dns-read-bytes 1) 16777216.0)
 		    (dns-read-bytes 3))))
 
@@ -438,5 +437,4 @@ If REVERSEP, look up an IP address."
 
 (provide 'dns)
 
-;; arch-tag: d0edd0c4-4cce-4538-ae92-06c3356ee80a
 ;;; dns.el ends here

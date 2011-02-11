@@ -1,7 +1,6 @@
 ;;; mpuz.el --- multiplication puzzle for GNU Emacs
 
-;; Copyright (C) 1990, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-;;   2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1990, 2001-2011  Free Software Foundation, Inc.
 
 ;; Author: Philippe Schnoebelen <phs@lsv.ens-cachan.fr>
 ;; Overhauled: Daniel Pfeiffer <occitan@esperanto.org>
@@ -87,33 +86,34 @@ t means never ding, and `error' means only ding on wrong input."
   :type 'hook
   :group 'mpuz)
 
-(defvar mpuz-mode-map nil
+(defvar mpuz-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "a" 'mpuz-try-letter)
+    (define-key map "b" 'mpuz-try-letter)
+    (define-key map "c" 'mpuz-try-letter)
+    (define-key map "d" 'mpuz-try-letter)
+    (define-key map "e" 'mpuz-try-letter)
+    (define-key map "f" 'mpuz-try-letter)
+    (define-key map "g" 'mpuz-try-letter)
+    (define-key map "h" 'mpuz-try-letter)
+    (define-key map "i" 'mpuz-try-letter)
+    (define-key map "j" 'mpuz-try-letter)
+    (define-key map "A" 'mpuz-try-letter)
+    (define-key map "B" 'mpuz-try-letter)
+    (define-key map "C" 'mpuz-try-letter)
+    (define-key map "D" 'mpuz-try-letter)
+    (define-key map "E" 'mpuz-try-letter)
+    (define-key map "F" 'mpuz-try-letter)
+    (define-key map "G" 'mpuz-try-letter)
+    (define-key map "H" 'mpuz-try-letter)
+    (define-key map "I" 'mpuz-try-letter)
+    (define-key map "J" 'mpuz-try-letter)
+    (define-key map "\C-g" 'mpuz-offer-abort)
+    (define-key map "?" 'describe-mode)
+    map)
   "Local keymap to use in Mult Puzzle.")
 
-(if mpuz-mode-map nil
-  (setq mpuz-mode-map (make-sparse-keymap))
-  (define-key mpuz-mode-map "a" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "b" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "c" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "d" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "e" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "f" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "g" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "h" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "i" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "j" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "A" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "B" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "C" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "D" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "E" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "F" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "G" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "H" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "I" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "J" 'mpuz-try-letter)
-  (define-key mpuz-mode-map "\C-g" 'mpuz-offer-abort)
-  (define-key mpuz-mode-map "?" 'describe-mode))
+
 
 (defun mpuz-mode ()
   "Multiplication puzzle mode.
@@ -518,5 +518,4 @@ You may abort a game by typing \\<mpuz-mode-map>\\[mpuz-offer-abort]."
 
 (provide 'mpuz)
 
-;; arch-tag: 2781d6ba-89e7-43b5-85c7-5d3a2e73feb1
 ;;; mpuz.el ends here

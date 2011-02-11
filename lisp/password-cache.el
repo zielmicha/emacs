@@ -1,7 +1,6 @@
 ;;; password-cache.el --- Read passwords, possibly using a password cache.
 
-;; Copyright (C) 1999, 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-;;   2010  Free Software Foundation, Inc.
+;; Copyright (C) 1999-2000, 2003-2011  Free Software Foundation, Inc.
 
 ;; Author: Simon Josefsson <simon@josefsson.org>
 ;; Created: 2003-12-21
@@ -134,5 +133,4 @@ The password is removed by a timer after `password-cache-expiry' seconds."
 
 (provide 'password-cache)
 
-;; arch-tag: ab160494-16c8-4c68-a4a1-73eebf6686e5
 ;;; password-cache.el ends here

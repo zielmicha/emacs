@@ -1563,10 +1563,10 @@
 1987-04-27  Richard Mlynarik  (mly@prep)
 
 	* fileio.c (APOLLO from lnz):
-	Fcopy_file, Fset_file_modes: Don't use un*x modes if
+	(Fcopy_file, Fset_file_modes): Don't use un*x modes if
 	env var USE_DOMAIN_ACLS is set.
-	Fset_file_modes: utimes fix.
-	Finsert_file_contents: Must do fstat after open for Apollo.
+	(Fset_file_modes): utimes fix.
+	(Finsert_file_contents): Must do fstat after open for Apollo.
 
 	* emacs.c (main): (APOLLO from lnz):
 	Don't use un*x modes if env var USE_DOMAIN_ACLS set.
@@ -2073,7 +2073,7 @@
 
 	* xfns.c (Fx_get_default): Add (unsigned char *) cast.
 
-	* window.c: typo.
+	* window.c: Typo.
 
 1987-02-09  Richard M. Stallman  (rms@prep)
 
@@ -4771,8 +4771,7 @@
 
 See ChangeLog.1 for earlier changes.
 
-    Copyright (C) 1986, 1987, 1988, 2001, 2002, 2003, 2004, 2005, 2006,
-	2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+    Copyright (C) 1986-1988, 2001-2011  Free Software Foundation, Inc.
 
   This file is part of GNU Emacs.
 
@@ -4789,4 +4788,3 @@ See ChangeLog.1 for earlier changes.
   You should have received a copy of the GNU General Public License
   along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
-;;; arch-tag: 3334fc8a-ec24-4601-99fc-4c8adc2b31bb

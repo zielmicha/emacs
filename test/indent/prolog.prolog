@@ -1,11 +1,18 @@
-%% -*- mode: prolog; coding: utf-8 -*-
+%% -*- mode: prolog; coding: utf-8; fill-column: 78 -*-
+
+%% Testing correct tokenizing.
+foo(X) :- 0'= = X.
+foo(X) :- 8'234 = X.
+foo(X) :- '\x45\' = X.
+foo(X) :- 'test 0'=X.
+foo(X) :- 'test 8'=X.
 
 %% wf(+E)
 %% Vérifie que E est une expression syntaxiquement correcte.
-wf(X) :- atom(X); integer(X); var(X).           %Une variable ou un entier.
-wf(lambda(X, T, B)) :- atom(X), wf(T), wf(B).   %Une fonction.
-wf(app(E1, E2)) :- wf(E1), wf(E2).              %Un appel de fonction.
-wf(pi(X, T, B)) :- atom(X), wf(T), wf(B).       %Le type d'une fonction.
+wf(X) :- atom(X); integer(X); var(X).         %Une variable ou un entier.
+wf(lambda(X, T, B)) :- atom(X), wf(T), wf(B). %Une fonction.
+wf(app(E1, E2)) :- wf(E1), wf(E2).            %Un appel de fonction.
+wf(pi(X, T, B)) :- atom(X), wf(T), wf(B).     %Le type d'une fonction.
 
 %% Éléments additionnels utilisés dans le langage source.
 wf(lambda(X, B)) :- atom(X), wf(B).
@@ -150,7 +157,7 @@ generalize(Ee, Te, Env, Eg, Tg) :-
 %% instantiate(+X, +T, -E)
 %% Utilise la variable X de type T.  Le résultat E est X auquel on ajoute
 %% tous les arguments implicites (de valeur inconnue).
-instantiate(X, T, X) :- var(T), ! .
+instantiate(X, T, X) :- var(T), !.
 instantiate(X, forall(_, _, T), app(E, _)) :- !, instantiate(X, T, E).
 instantiate(X, _, X).
 

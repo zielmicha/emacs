@@ -1,7 +1,6 @@
 ;;; ibuffer.el --- operate on buffers like dired
 
-;; Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-;;   2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 2000-2011  Free Software Foundation, Inc.
 
 ;; Author: Colin Walters <walters@verbum.org>
 ;; Maintainer: John Paul Wallington <jpw@gnu.org>
@@ -332,8 +331,9 @@ directory, like `default-directory'."
   :group 'ibuffer)
 
 (defcustom ibuffer-compressed-file-name-regexp
-  "\\.\\(arj\\|bgz\\|bz2\\|gz\\|lzh\\|taz\\|tgz\\|zip\\|z\\)$"
+  "\\.\\(arj\\|bgz\\|bz2\\|gz\\|lzh\\|taz\\|tgz\\|xz\\|zip\\|z\\)$"
   "Regexp to match compressed file names."
+  :version "24.1"                       ; added xz
   :type 'regexp
   :group 'ibuffer)
 
@@ -432,10 +432,8 @@ directory, like `default-directory'."
 
     ;; immediate operations
     (define-key map (kbd "n") 'ibuffer-forward-line)
-    (define-key map (kbd "<down>") 'ibuffer-forward-line)
     (define-key map (kbd "SPC") 'forward-line)
     (define-key map (kbd "p") 'ibuffer-backward-line)
-    (define-key map (kbd "<up>") 'ibuffer-backward-line)
     (define-key map (kbd "M-}") 'ibuffer-forward-next-marked)
     (define-key map (kbd "M-{") 'ibuffer-backwards-next-marked)
     (define-key map (kbd "l") 'ibuffer-redisplay)
@@ -476,9 +474,9 @@ directory, like `default-directory'."
     (define-key map (kbd "/ /") 'ibuffer-filter-disable)
 
     (define-key map (kbd "M-n") 'ibuffer-forward-filter-group)
-    (define-key map (kbd "<right>") 'ibuffer-forward-filter-group)
+    (define-key map "\t" 'ibuffer-forward-filter-group)
     (define-key map (kbd "M-p") 'ibuffer-backward-filter-group)
-    (define-key map (kbd "<left>") 'ibuffer-backward-filter-group)
+    (define-key map [backtab] 'ibuffer-backward-filter-group)
     (define-key map (kbd "M-j") 'ibuffer-jump-to-filter-group)
     (define-key map (kbd "C-k") 'ibuffer-kill-line)
     (define-key map (kbd "C-y") 'ibuffer-yank)
@@ -1052,7 +1050,6 @@ If optional argument SINGLE is non-nil, then also ensure there is only
 one window."
   (interactive "P")
   (let ((buf (ibuffer-current-buffer t)))
-    (bury-buffer (current-buffer))
     (switch-to-buffer buf)
     (when single
       (delete-other-windows))))
@@ -2641,7 +2638,7 @@ will be inserted before the group at point."
 ;;;;;;  ibuffer-backward-filter-group ibuffer-forward-filter-group
 ;;;;;;  ibuffer-toggle-filter-group ibuffer-mouse-toggle-filter-group
 ;;;;;;  ibuffer-interactive-filter-by-mode ibuffer-mouse-filter-by-mode
-;;;;;;  ibuffer-auto-mode) "ibuf-ext" "ibuf-ext.el" "e1272bfdc7c3b6e926b2a68155217303")
+;;;;;;  ibuffer-auto-mode) "ibuf-ext" "ibuf-ext.el" "f163e17664a89a6f0aa2b15bfaaa65a4")
 ;;; Generated autoloads from ibuf-ext.el
 
 (autoload 'ibuffer-auto-mode "ibuf-ext" "\
@@ -3017,5 +3014,4 @@ defaults to one.
 ;; coding: iso-8859-1
 ;; End:
 
-;; arch-tag: 72581688-0603-4954-b8cf-837c700f62e8
 ;;; ibuffer.el ends here

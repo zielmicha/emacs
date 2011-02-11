@@ -1,8 +1,7 @@
 /* Basic character set support.
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-     2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 2001-2011  Free Software Foundation, Inc.
    Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-     2005, 2006, 2007, 2008, 2009, 2010
+     2005, 2006, 2007, 2008, 2009, 2010, 2011
      National Institute of Advanced Industrial Science and Technology (AIST)
      Registration Number H14PRO021
 
@@ -28,7 +27,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <config.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/types.h>
@@ -54,10 +52,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
   charset_table as a struct charset.
 
 */
-
-/* List of all charsets.  This variable is used only from Emacs
-   Lisp.  */
-Lisp_Object Vcharset_list;
 
 /* Hash table that contains attributes of each charset.  Keys are
    charset symbols, and values are vectors of charset attributes.  */
@@ -115,18 +109,11 @@ Lisp_Object Viso_2022_charset_list;
 /* List of emacs-mule charsets.  */
 Lisp_Object Vemacs_mule_charset_list;
 
-struct charset *emacs_mule_charset[256];
+int emacs_mule_charset[256];
 
 /* Mapping table from ISO2022's charset (specified by DIMENSION,
    CHARS, and FINAL-CHAR) to Emacs' charset.  */
 int iso_charset_table[ISO_MAX_DIMENSION][ISO_MAX_CHARS][ISO_MAX_FINAL];
-
-Lisp_Object Vcharset_map_path;
-
-/* If nonzero, don't load charset maps.  */
-int inhibit_load_charset_map;
-
-Lisp_Object Vcurrent_iso639_language;
 
 #define CODE_POINT_TO_INDEX(charset, code)				\
   ((charset)->code_linear_p						\
@@ -305,7 +292,7 @@ load_charset_map (struct charset *charset, struct charset_map_entries *entries, 
       else
 	{
 	  if (! temp_charset_work)
-	    temp_charset_work = malloc (sizeof (*temp_charset_work));
+	    temp_charset_work = xmalloc (sizeof (*temp_charset_work));
 	  if (control_flag == 1)
 	    {
 	      memset (temp_charset_work->table.decoder, -1,
@@ -427,7 +414,7 @@ load_charset_map (struct charset *charset, struct charset_map_entries *entries, 
 
 
 /* Read a hexadecimal number (preceded by "0x") from the file FP while
-   paying attention to comment charcter '#'.  */
+   paying attention to comment character '#'.  */
 
 static INLINE unsigned
 read_hex (FILE *fp, int *eof)
@@ -678,7 +665,7 @@ map_charset_for_dump (void (*c_function) (Lisp_Object, Lisp_Object), Lisp_Object
   c = temp_charset_work->min_char;
   stop = (temp_charset_work->max_char < 0x20000
 	  ? temp_charset_work->max_char : 0xFFFF);
-	  
+
   while (1)
     {
       int index = GET_TEMP_CHARSET_WORK_ENCODER (c);
@@ -1211,7 +1198,7 @@ usage: (define-charset-internal ...)  */)
 
   if (charset.emacs_mule_id >= 0)
     {
-      emacs_mule_charset[charset.emacs_mule_id] = CHARSET_FROM_ID (id);
+      emacs_mule_charset[charset.emacs_mule_id] = id;
       if (charset.emacs_mule_id < 0xA0)
 	emacs_mule_bytes[charset.emacs_mule_id] = charset.dimension + 1;
       else
@@ -1840,7 +1827,7 @@ encode_char (struct charset *charset, int c)
       else
 	{
 	  code = GET_TEMP_CHARSET_WORK_ENCODER (c);
-	  code = INDEX_TO_CODE_POINT (charset, code);	  
+	  code = INDEX_TO_CODE_POINT (charset, code);
 	}
     }
   else				/* method == CHARSET_METHOD_OFFSET */
@@ -2307,7 +2294,7 @@ init_charset (void)
 {
   Lisp_Object tempdir;
   tempdir = Fexpand_file_name (build_string ("charsets"), Vdata_directory);
-  if (access ((char *) SDATA (tempdir), 0) < 0)
+  if (access (SSDATA (tempdir), 0) < 0)
     {
       dir_warning ("Error: charsets directory (%s) does not exist.\n\
 Emacs will not function correctly without the character map files.\n\
@@ -2331,7 +2318,7 @@ init_charset_once (void)
 	iso_charset_table[i][j][k] = -1;
 
   for (i = 0; i < 256; i++)
-    emacs_mule_charset[i] = NULL;
+    emacs_mule_charset[i] = -1;
 
   charset_jisx0201_roman = -1;
   charset_jisx0208_1978 = -1;
@@ -2365,8 +2352,8 @@ syms_of_charset (void)
   Vemacs_mule_charset_list = Qnil;
 
   /* Don't staticpro them here.  It's done in syms_of_fns.  */
-  QCtest = intern (":test");
-  Qeq = intern ("eq");
+  QCtest = intern_c_string (":test");
+  Qeq = intern_c_string ("eq");
 
   staticpro (&Vcharset_hash_table);
   {
@@ -2405,19 +2392,19 @@ syms_of_charset (void)
   defsubr (&Scharset_id_internal);
   defsubr (&Ssort_charsets);
 
-  DEFVAR_LISP ("charset-map-path", &Vcharset_map_path,
+  DEFVAR_LISP ("charset-map-path", Vcharset_map_path,
 	       doc: /* *List of directories to search for charset map files.  */);
   Vcharset_map_path = Qnil;
 
-  DEFVAR_BOOL ("inhibit-load-charset-map", &inhibit_load_charset_map,
+  DEFVAR_BOOL ("inhibit-load-charset-map", inhibit_load_charset_map,
 	       doc: /* Inhibit loading of charset maps.  Used when dumping Emacs.  */);
   inhibit_load_charset_map = 0;
 
-  DEFVAR_LISP ("charset-list", &Vcharset_list,
+  DEFVAR_LISP ("charset-list", Vcharset_list,
 	       doc: /* List of all charsets ever defined.  */);
   Vcharset_list = Qnil;
 
-  DEFVAR_LISP ("current-iso639-language", &Vcurrent_iso639_language,
+  DEFVAR_LISP ("current-iso639-language", Vcurrent_iso639_language,
 	       doc: /* ISO639 language mnemonic symbol for the current language environment.
 If the current language environment is for multiple languages (e.g. "Latin-1"),
 the value may be a list of mnemonics.  */);
@@ -2443,6 +2430,3 @@ the value may be a list of mnemonics.  */);
 }
 
 #endif /* emacs */
-
-/* arch-tag: 66a89b8d-4c28-47d3-9ca1-56f78440d69f
-   (do not change this comment) */

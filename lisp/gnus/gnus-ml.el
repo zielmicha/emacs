@@ -1,7 +1,6 @@
 ;;; gnus-ml.el --- Mailing list minor mode for Gnus
 
-;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2000-2011 Free Software Foundation, Inc.
 
 ;; Author: Julien Gilles  <jgilles@free.fr>
 ;; Keywords: news, mail
@@ -180,5 +179,4 @@ ADDRESS is specified by a \"mailto:\" URL."
 
 (provide 'gnus-ml)
 
-;; arch-tag: 936c0fe6-acce-4c16-87d0-eded88078896
 ;;; gnus-ml.el ends here

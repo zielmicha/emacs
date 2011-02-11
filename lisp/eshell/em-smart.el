@@ -1,7 +1,6 @@
 ;;; em-smart.el --- smart display of output
 
-;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-;;   2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1999-2011  Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -86,7 +85,7 @@ it to get a real sense of how it works."
 ;;; User Variables:
 
 (defcustom eshell-smart-load-hook '(eshell-smart-initialize)
-  "*A list of functions to call when loading `eshell-smart'."
+  "A list of functions to call when loading `eshell-smart'."
   :type 'hook
   :group 'eshell-smart)
 
@@ -96,12 +95,12 @@ it to get a real sense of how it works."
     (lambda ()
       (remove-hook 'window-configuration-change-hook
 		   'eshell-refresh-windows))))
-  "*A hook that gets run when `eshell-smart' is unloaded."
+  "A hook that gets run when `eshell-smart' is unloaded."
   :type 'hook
   :group 'eshell-smart)
 
 (defcustom eshell-review-quick-commands nil
-  "*If t, always review commands.
+  "If t, always review commands.
 Reviewing means keeping point on the text of the command that was just
 invoked, to allow corrections to be made easily.
 
@@ -124,12 +123,12 @@ only if that output can be presented in its entirely in the Eshell window."
     yank-pop
     yank-rectangle
     yank)
-  "*A list of commands which cause Eshell to jump to the end of buffer."
+  "A list of commands which cause Eshell to jump to the end of buffer."
   :type '(repeat function)
   :group 'eshell-smart)
 
 (defcustom eshell-smart-space-goes-to-end t
-  "*If non-nil, space will go to end of buffer when point-max is visible.
+  "If non-nil, space will go to end of buffer when point-max is visible.
 That is, if a command is running and the user presses SPACE at a time
 when the end of the buffer is visible, point will go to the end of the
 buffer and smart-display will be turned off (that is, subsequently
@@ -148,7 +147,7 @@ buffer using \\[end-of-buffer]."
   :group 'eshell-smart)
 
 (defcustom eshell-where-to-jump 'begin
-  "*This variable indicates where point should jump to after a command.
+  "This variable indicates where point should jump to after a command.
 The options are `begin', `after' or `end'."
   :type '(radio (const :tag "Beginning of command" begin)
 		(const :tag "After command word" after)
@@ -327,5 +326,4 @@ and the end of the buffer are still visible."
 ;; generated-autoload-file: "esh-groups.el"
 ;; End:
 
-;; arch-tag: 8c0112c7-379c-4d54-9a1c-204d68786a4b
 ;;; em-smart.el ends here

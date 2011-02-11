@@ -1,7 +1,5 @@
 /* Random utility Lisp functions.
-   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997,
-                 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-                 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 1985-1987, 1993-1995, 1997-2011
 		 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
@@ -21,9 +19,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <config.h>
 
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 #include <time.h>
 #include <setjmp.h>
 
@@ -52,14 +48,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #ifndef NULL
 #define NULL ((POINTER_TYPE *)0)
 #endif
-
-/* Nonzero enables use of dialog boxes for questions
-   asked by mouse commands.  */
-int use_dialog_box;
-
-/* Nonzero enables use of a file dialog for file name
-   questions asked by mouse commands.  */
-int use_file_dialog;
 
 Lisp_Object Qstring_lessp, Qprovide, Qrequire;
 Lisp_Object Qyes_or_no_p_history;
@@ -241,8 +229,8 @@ If string STR1 is greater, the value is a positive number N;
   N - 1 is the number of characters that match at the beginning.  */)
   (Lisp_Object str1, Lisp_Object start1, Lisp_Object end1, Lisp_Object str2, Lisp_Object start2, Lisp_Object end2, Lisp_Object ignore_case)
 {
-  register int end1_char, end2_char;
-  register int i1, i1_byte, i2, i2_byte;
+  register EMACS_INT end1_char, end2_char;
+  register EMACS_INT i1, i1_byte, i2, i2_byte;
 
   CHECK_STRING (str1);
   CHECK_STRING (str2);
@@ -332,8 +320,8 @@ Case is significant.
 Symbols are also allowed; their print names are used instead.  */)
   (register Lisp_Object s1, Lisp_Object s2)
 {
-  register int end;
-  register int i1, i1_byte, i2, i2_byte;
+  register EMACS_INT end;
+  register EMACS_INT i1, i1_byte, i2, i2_byte;
 
   if (SYMBOLP (s1))
     s1 = SYMBOL_NAME (s1);
@@ -456,8 +444,8 @@ with the original.  */)
 struct textprop_rec
 {
   int argnum;			/* refer to ARGS (arguments of `concat') */
-  int from;			/* refer to ARGS[argnum] (argument string) */
-  int to;			/* refer to VAL (the target string) */
+  EMACS_INT from;		/* refer to ARGS[argnum] (argument string) */
+  EMACS_INT to;			/* refer to VAL (the target string) */
 };
 
 static Lisp_Object
@@ -466,10 +454,10 @@ concat (int nargs, Lisp_Object *args, enum Lisp_Type target_type, int last_speci
   Lisp_Object val;
   register Lisp_Object tail;
   register Lisp_Object this;
-  int toindex;
-  int toindex_byte = 0;
-  register int result_len;
-  register int result_len_byte;
+  EMACS_INT toindex;
+  EMACS_INT toindex_byte = 0;
+  register EMACS_INT result_len;
+  register EMACS_INT result_len_byte;
   register int argnum;
   Lisp_Object last_tail;
   Lisp_Object prev;
@@ -513,16 +501,16 @@ concat (int nargs, Lisp_Object *args, enum Lisp_Type target_type, int last_speci
   some_multibyte = 0;
   for (argnum = 0; argnum < nargs; argnum++)
     {
-      int len;
+      EMACS_INT len;
       this = args[argnum];
       len = XFASTINT (Flength (this));
       if (target_type == Lisp_String)
 	{
 	  /* We must count the number of bytes needed in the string
 	     as well as the number of characters.  */
-	  int i;
+	  EMACS_INT i;
 	  Lisp_Object ch;
-	  int this_len_byte;
+	  EMACS_INT this_len_byte;
 
 	  if (VECTORP (this))
 	    for (i = 0; i < len; i++)
@@ -594,9 +582,9 @@ concat (int nargs, Lisp_Object *args, enum Lisp_Type target_type, int last_speci
   for (argnum = 0; argnum < nargs; argnum++)
     {
       Lisp_Object thislen;
-      int thisleni = 0;
-      register unsigned int thisindex = 0;
-      register unsigned int thisindex_byte = 0;
+      EMACS_INT thisleni = 0;
+      register EMACS_INT thisindex = 0;
+      register EMACS_INT thisindex_byte = 0;
 
       this = args[argnum];
       if (!CONSP (this))
@@ -606,7 +594,7 @@ concat (int nargs, Lisp_Object *args, enum Lisp_Type target_type, int last_speci
       if (STRINGP (this) && STRINGP (val)
 	  && STRING_MULTIBYTE (this) == some_multibyte)
 	{
-	  int thislen_byte = SBYTES (this);
+	  EMACS_INT thislen_byte = SBYTES (this);
 
 	  memcpy (SDATA (val) + toindex_byte, SDATA (this), SBYTES (this));
 	  if (! NULL_INTERVAL_P (STRING_INTERVALS (this)))
@@ -713,7 +701,7 @@ concat (int nargs, Lisp_Object *args, enum Lisp_Type target_type, int last_speci
   if (num_textprops > 0)
     {
       Lisp_Object props;
-      int last_to_end = -1;
+      EMACS_INT last_to_end = -1;
 
       for (argnum = 0; argnum < num_textprops; argnum++)
 	{
@@ -872,7 +860,7 @@ string_byte_to_char (Lisp_Object string, EMACS_INT byte_index)
 
 /* Convert STRING to a multibyte string.  */
 
-Lisp_Object
+static Lisp_Object
 string_make_multibyte (Lisp_Object string)
 {
   unsigned char *buf;
@@ -920,7 +908,7 @@ string_to_multibyte (Lisp_Object string)
   /* If all the chars are ASCII, they won't need any more bytes once
      converted.  */
   if (nbytes == SBYTES (string))
-    return make_multibyte_string (SDATA (string), nbytes, nbytes);
+    return make_multibyte_string (SSDATA (string), nbytes, nbytes);
 
   SAFE_ALLOCA (buf, unsigned char *, nbytes);
   memcpy (buf, SDATA (string), SBYTES (string));
@@ -938,7 +926,7 @@ string_to_multibyte (Lisp_Object string)
 Lisp_Object
 string_make_unibyte (Lisp_Object string)
 {
-  int nchars;
+  EMACS_INT nchars;
   unsigned char *buf;
   Lisp_Object ret;
   USE_SAFE_ALLOCA;
@@ -1003,7 +991,7 @@ If STRING is multibyte and contains a character of charset
 
   if (STRING_MULTIBYTE (string))
     {
-      int bytes = SBYTES (string);
+      EMACS_INT bytes = SBYTES (string);
       unsigned char *str = (unsigned char *) xmalloc (bytes);
 
       memcpy (str, SDATA (string), bytes);
@@ -1036,7 +1024,7 @@ If you're not sure, whether to use `string-as-multibyte' or
   if (! STRING_MULTIBYTE (string))
     {
       Lisp_Object new_string;
-      int nchars, nbytes;
+      EMACS_INT nchars, nbytes;
 
       parse_str_as_multibyte (SDATA (string),
 			      SBYTES (string),
@@ -1138,10 +1126,10 @@ value is a new vector that contains the elements between index FROM
   (Lisp_Object string, register Lisp_Object from, Lisp_Object to)
 {
   Lisp_Object res;
-  int size;
-  int size_byte = 0;
-  int from_char, to_char;
-  int from_byte = 0, to_byte = 0;
+  EMACS_INT size;
+  EMACS_INT size_byte = 0;
+  EMACS_INT from_char, to_char;
+  EMACS_INT from_byte = 0, to_byte = 0;
 
   CHECK_VECTOR_OR_STRING (string);
   CHECK_NUMBER (from);
@@ -1183,7 +1171,7 @@ value is a new vector that contains the elements between index FROM
 
   if (STRINGP (string))
     {
-      res = make_specified_string (SDATA (string) + from_byte,
+      res = make_specified_string (SSDATA (string) + from_byte,
 				   to_char - from_char, to_byte - from_byte,
 				   STRING_MULTIBYTE (string));
       copy_text_properties (make_number (from_char), make_number (to_char),
@@ -1206,9 +1194,9 @@ If FROM or TO is negative, it counts from the end.
 With one argument, just copy STRING without its properties.  */)
   (Lisp_Object string, register Lisp_Object from, Lisp_Object to)
 {
-  int size, size_byte;
-  int from_char, to_char;
-  int from_byte, to_byte;
+  EMACS_INT size, size_byte;
+  EMACS_INT from_char, to_char;
+  EMACS_INT from_byte, to_byte;
 
   CHECK_STRING (string);
 
@@ -1247,7 +1235,7 @@ With one argument, just copy STRING without its properties.  */)
     args_out_of_range_3 (string, make_number (from_char),
 			 make_number (to_char));
 
-  return make_specified_string (SDATA (string) + from_byte,
+  return make_specified_string (SSDATA (string) + from_byte,
 				to_char - from_char, to_byte - from_byte,
 				STRING_MULTIBYTE (string));
 }
@@ -1256,11 +1244,12 @@ With one argument, just copy STRING without its properties.  */)
    both in characters and in bytes.  */
 
 Lisp_Object
-substring_both (Lisp_Object string, int from, int from_byte, int to, int to_byte)
+substring_both (Lisp_Object string, EMACS_INT from, EMACS_INT from_byte,
+		EMACS_INT to, EMACS_INT to_byte)
 {
   Lisp_Object res;
-  int size;
-  int size_byte;
+  EMACS_INT size;
+  EMACS_INT size_byte;
 
   CHECK_VECTOR_OR_STRING (string);
 
@@ -1277,7 +1266,7 @@ substring_both (Lisp_Object string, int from, int from_byte, int to, int to_byte
 
   if (STRINGP (string))
     {
-      res = make_specified_string (SDATA (string) + from_byte,
+      res = make_specified_string (SSDATA (string) + from_byte,
 				   to - from, to_byte - from_byte,
 				   STRING_MULTIBYTE (string));
       copy_text_properties (make_number (from), make_number (to),
@@ -2147,7 +2136,9 @@ DEFUN ("fillarray", Ffillarray, Sfillarray, 2, 2, 0,
 ARRAY is a vector, string, char-table, or bool-vector.  */)
   (Lisp_Object array, Lisp_Object item)
 {
-  register int size, index, charval;
+  register EMACS_INT size, index;
+  int charval;
+
   if (VECTORP (array))
     {
       register Lisp_Object *p = XVECTOR (array)->contents;
@@ -2173,7 +2164,7 @@ ARRAY is a vector, string, char-table, or bool-vector.  */)
 	{
 	  unsigned char str[MAX_MULTIBYTE_LENGTH];
 	  int len = CHAR_STRING (charval, str);
-	  int size_byte = SBYTES (array);
+	  EMACS_INT size_byte = SBYTES (array);
 	  unsigned char *p1 = p, *endp = p + size_byte;
 	  int i;
 
@@ -2221,7 +2212,7 @@ DEFUN ("clear-string", Fclear_string, Sclear_string,
 This makes STRING unibyte and may change its length.  */)
   (Lisp_Object string)
 {
-  int len;
+  EMACS_INT len;
   CHECK_STRING (string);
   len = SBYTES (string);
   memset (SDATA (string), 0, len);
@@ -2285,11 +2276,11 @@ usage: (nconc &rest LISTS)  */)
  LENI is the length of VALS, which should also be the length of SEQ.  */
 
 static void
-mapcar1 (int leni, Lisp_Object *vals, Lisp_Object fn, Lisp_Object seq)
+mapcar1 (EMACS_INT leni, Lisp_Object *vals, Lisp_Object fn, Lisp_Object seq)
 {
   register Lisp_Object tail;
   Lisp_Object dummy;
-  register int i;
+  register EMACS_INT i;
   struct gcpro gcpro1, gcpro2, gcpro3;
 
   if (vals)
@@ -2331,12 +2322,12 @@ mapcar1 (int leni, Lisp_Object *vals, Lisp_Object fn, Lisp_Object seq)
     }
   else if (STRINGP (seq))
     {
-      int i_byte;
+      EMACS_INT i_byte;
 
       for (i = 0, i_byte = 0; i < leni;)
 	{
 	  int c;
-	  int i_before = i;
+	  EMACS_INT i_before = i;
 
 	  FETCH_STRING_CHAR_ADVANCE (c, seq, i, i_byte);
 	  XSETFASTINT (dummy, c);
@@ -2368,10 +2359,10 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence, Lisp_Object separator)
 {
   Lisp_Object len;
-  register int leni;
+  register EMACS_INT leni;
   int nargs;
   register Lisp_Object *args;
-  register int i;
+  register EMACS_INT i;
   struct gcpro gcpro1;
   Lisp_Object ret;
   USE_SAFE_ALLOCA;
@@ -2408,7 +2399,7 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence)
 {
   register Lisp_Object len;
-  register int leni;
+  register EMACS_INT leni;
   register Lisp_Object *args;
   Lisp_Object ret;
   USE_SAFE_ALLOCA;
@@ -2434,7 +2425,7 @@ Unlike `mapcar', don't accumulate the results.  Return SEQUENCE.
 SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   (Lisp_Object function, Lisp_Object sequence)
 {
-  register int leni;
+  register EMACS_INT leni;
 
   leni = XFASTINT (Flength (sequence));
   if (CHAR_TABLE_P (sequence))
@@ -2442,146 +2433,6 @@ SEQUENCE may be a list, a vector, a bool-vector, or a string.  */)
   mapcar1 (leni, 0, function, sequence);
 
   return sequence;
-}
-
-/* Anything that calls this function must protect from GC!  */
-
-DEFUN ("y-or-n-p", Fy_or_n_p, Sy_or_n_p, 1, 1, 0,
-       doc: /* Ask user a "y or n" question.  Return t if answer is "y".
-Takes one argument, which is the string to display to ask the question.
-It should end in a space; `y-or-n-p' adds `(y or n) ' to it.
-No confirmation of the answer is requested; a single character is enough.
-Also accepts Space to mean yes, or Delete to mean no.  \(Actually, it uses
-the bindings in `query-replace-map'; see the documentation of that variable
-for more information.  In this case, the useful bindings are `act', `skip',
-`recenter', and `quit'.\)
-
-Under a windowing system a dialog box will be used if `last-nonmenu-event'
-is nil and `use-dialog-box' is non-nil.  */)
-  (Lisp_Object prompt)
-{
-  register Lisp_Object obj, key, def, map;
-  register int answer;
-  Lisp_Object xprompt;
-  Lisp_Object args[2];
-  struct gcpro gcpro1, gcpro2;
-  int count = SPECPDL_INDEX ();
-
-  specbind (Qcursor_in_echo_area, Qt);
-
-  map = Fsymbol_value (intern ("query-replace-map"));
-
-  CHECK_STRING (prompt);
-  xprompt = prompt;
-  GCPRO2 (prompt, xprompt);
-
-#ifdef HAVE_WINDOW_SYSTEM
-  if (display_hourglass_p)
-    cancel_hourglass ();
-#endif
-
-  while (1)
-    {
-
-#ifdef HAVE_MENUS
-      if (FRAME_WINDOW_P (SELECTED_FRAME ())
-          && (NILP (last_nonmenu_event) || CONSP (last_nonmenu_event))
-	  && use_dialog_box
-	  && have_menus_p ())
-	{
-	  Lisp_Object pane, menu;
-	  redisplay_preserve_echo_area (3);
-	  pane = Fcons (Fcons (build_string ("Yes"), Qt),
-			Fcons (Fcons (build_string ("No"), Qnil),
-			       Qnil));
-	  menu = Fcons (prompt, pane);
-	  obj = Fx_popup_dialog (Qt, menu, Qnil);
-	  answer = !NILP (obj);
-	  break;
-	}
-#endif /* HAVE_MENUS */
-      cursor_in_echo_area = 1;
-      choose_minibuf_frame ();
-
-      {
-	Lisp_Object pargs[3];
-
-	/* Colorize prompt according to `minibuffer-prompt' face.  */
-	pargs[0] = build_string ("%s(y or n) ");
-	pargs[1] = intern ("face");
-	pargs[2] = intern ("minibuffer-prompt");
-	args[0] = Fpropertize (3, pargs);
-	args[1] = xprompt;
-	Fmessage (2, args);
-      }
-
-      if (minibuffer_auto_raise)
-	{
-	  Lisp_Object mini_frame;
-
-	  mini_frame = WINDOW_FRAME (XWINDOW (minibuf_window));
-
-	  Fraise_frame (mini_frame);
-	}
-
-      temporarily_switch_to_single_kboard (SELECTED_FRAME ());
-      obj = read_filtered_event (1, 0, 0, 0, Qnil);
-      cursor_in_echo_area = 0;
-      /* If we need to quit, quit with cursor_in_echo_area = 0.  */
-      QUIT;
-
-      key = Fmake_vector (make_number (1), obj);
-      def = Flookup_key (map, key, Qt);
-
-      if (EQ (def, intern ("skip")))
-	{
-	  answer = 0;
-	  break;
-	}
-      else if (EQ (def, intern ("act")))
-	{
-	  answer = 1;
-	  break;
-	}
-      else if (EQ (def, intern ("recenter")))
-	{
-	  Frecenter (Qnil);
-	  xprompt = prompt;
-	  continue;
-	}
-      else if (EQ (def, intern ("quit")))
-	Vquit_flag = Qt;
-      /* We want to exit this command for exit-prefix,
-	 and this is the only way to do it.  */
-      else if (EQ (def, intern ("exit-prefix")))
-	Vquit_flag = Qt;
-
-      QUIT;
-
-      /* If we don't clear this, then the next call to read_char will
-	 return quit_char again, and we'll enter an infinite loop.  */
-      Vquit_flag = Qnil;
-
-      Fding (Qnil);
-      Fdiscard_input ();
-      if (EQ (xprompt, prompt))
-	{
-	  args[0] = build_string ("Please answer y or n.  ");
-	  args[1] = prompt;
-	  xprompt = Fconcat (2, args);
-	}
-    }
-  UNGCPRO;
-
-  if (! noninteractive)
-    {
-      cursor_in_echo_area = -1;
-      message_with_string (answer ? "%s(y or n) y" : "%s(y or n) n",
-			   xprompt, 0);
-    }
-
-  unbind_to (count, Qnil);
-  return answer ? Qt : Qnil;
 }
 
 /* This is how C code calls `yes-or-no-p' and allows the user
@@ -2599,10 +2450,11 @@ do_yes_or_no_p (Lisp_Object prompt)
 
 DEFUN ("yes-or-no-p", Fyes_or_no_p, Syes_or_no_p, 1, 1, 0,
        doc: /* Ask user a yes-or-no question.  Return t if answer is yes.
-Takes one argument, which is the string to display to ask the question.
-It should end in a space; `yes-or-no-p' adds `(yes or no) ' to it.
-The user must confirm the answer with RET,
-and can edit it until it has been confirmed.
+PROMPT is the string to display to ask the question.  It should end in
+a space; `yes-or-no-p' adds \"(yes or no) \" to it.
+
+The user must confirm the answer with RET, and can edit it until it
+has been confirmed.
 
 Under a windowing system a dialog box will be used if `last-nonmenu-event'
 is nil, and `use-dialog-box' is non-nil.  */)
@@ -2644,12 +2496,12 @@ is nil, and `use-dialog-box' is non-nil.  */)
       ans = Fdowncase (Fread_from_minibuffer (prompt, Qnil, Qnil, Qnil,
 					      Qyes_or_no_p_history, Qnil,
 					      Qnil));
-      if (SCHARS (ans) == 3 && !strcmp (SDATA (ans), "yes"))
+      if (SCHARS (ans) == 3 && !strcmp (SSDATA (ans), "yes"))
 	{
 	  UNGCPRO;
 	  return Qt;
 	}
-      if (SCHARS (ans) == 2 && !strcmp (SDATA (ans), "no"))
+      if (SCHARS (ans) == 2 && !strcmp (SSDATA (ans), "no"))
 	{
 	  UNGCPRO;
 	  return Qnil;
@@ -2698,7 +2550,7 @@ advisable.  */)
   return ret;
 }
 
-Lisp_Object Vfeatures, Qsubfeatures;
+Lisp_Object Qsubfeatures;
 
 DEFUN ("featurep", Ffeaturep, Sfeaturep, 1, 2, 0,
        doc: /* Return t if FEATURE is present in this Emacs.
@@ -3098,8 +2950,9 @@ static const short base64_char_to_value[128] =
    base64 characters.  */
 
 
-static int base64_encode_1 (const char *, char *, int, int, int);
-static int base64_decode_1 (const char *, char *, int, int, int *);
+static EMACS_INT base64_encode_1 (const char *, char *, EMACS_INT, int, int);
+static EMACS_INT base64_decode_1 (const char *, char *, EMACS_INT, int,
+				  EMACS_INT *);
 
 DEFUN ("base64-encode-region", Fbase64_encode_region, Sbase64_encode_region,
        2, 3, "r",
@@ -3110,9 +2963,9 @@ into shorter lines.  */)
   (Lisp_Object beg, Lisp_Object end, Lisp_Object no_line_break)
 {
   char *encoded;
-  int allength, length;
-  int ibeg, iend, encoded_length;
-  int old_pos = PT;
+  EMACS_INT allength, length;
+  EMACS_INT ibeg, iend, encoded_length;
+  EMACS_INT old_pos = PT;
   USE_SAFE_ALLOCA;
 
   validate_region (&beg, &end);
@@ -3168,7 +3021,7 @@ Optional second argument NO-LINE-BREAK means do not break long lines
 into shorter lines.  */)
   (Lisp_Object string, Lisp_Object no_line_break)
 {
-  int allength, length, encoded_length;
+  EMACS_INT allength, length, encoded_length;
   char *encoded;
   Lisp_Object encoded_string;
   USE_SAFE_ALLOCA;
@@ -3185,7 +3038,7 @@ into shorter lines.  */)
   /* We need to allocate enough room for decoding the text. */
   SAFE_ALLOCA (encoded, char *, allength);
 
-  encoded_length = base64_encode_1 (SDATA (string),
+  encoded_length = base64_encode_1 (SSDATA (string),
 				    encoded, length, NILP (no_line_break),
 				    STRING_MULTIBYTE (string));
   if (encoded_length > allength)
@@ -3204,10 +3057,12 @@ into shorter lines.  */)
   return encoded_string;
 }
 
-static int
-base64_encode_1 (const char *from, char *to, int length, int line_break, int multibyte)
+static EMACS_INT
+base64_encode_1 (const char *from, char *to, EMACS_INT length,
+		 int line_break, int multibyte)
 {
-  int counter = 0, i = 0;
+  int counter = 0;
+  EMACS_INT i = 0;
   char *e = to;
   int c;
   unsigned int value;
@@ -3306,11 +3161,11 @@ Return the length of the decoded text.
 If the region can't be decoded, signal an error and don't modify the buffer.  */)
   (Lisp_Object beg, Lisp_Object end)
 {
-  int ibeg, iend, length, allength;
+  EMACS_INT ibeg, iend, length, allength;
   char *decoded;
-  int old_pos = PT;
-  int decoded_length;
-  int inserted_chars;
+  EMACS_INT old_pos = PT;
+  EMACS_INT decoded_length;
+  EMACS_INT inserted_chars;
   int multibyte = !NILP (current_buffer->enable_multibyte_characters);
   USE_SAFE_ALLOCA;
 
@@ -3367,7 +3222,7 @@ DEFUN ("base64-decode-string", Fbase64_decode_string, Sbase64_decode_string,
   (Lisp_Object string)
 {
   char *decoded;
-  int length, decoded_length;
+  EMACS_INT length, decoded_length;
   Lisp_Object decoded_string;
   USE_SAFE_ALLOCA;
 
@@ -3378,7 +3233,7 @@ DEFUN ("base64-decode-string", Fbase64_decode_string, Sbase64_decode_string,
   SAFE_ALLOCA (decoded, char *, length);
 
   /* The decoded result should be unibyte. */
-  decoded_length = base64_decode_1 (SDATA (string), decoded, length,
+  decoded_length = base64_decode_1 (SSDATA (string), decoded, length,
 				    0, NULL);
   if (decoded_length > length)
     abort ();
@@ -3399,14 +3254,15 @@ DEFUN ("base64-decode-string", Fbase64_decode_string, Sbase64_decode_string,
    form.  If NCHARS_RETRUN is not NULL, store the number of produced
    characters in *NCHARS_RETURN.  */
 
-static int
-base64_decode_1 (const char *from, char *to, int length, int multibyte, int *nchars_return)
+static EMACS_INT
+base64_decode_1 (const char *from, char *to, EMACS_INT length,
+		 int multibyte, EMACS_INT *nchars_return)
 {
-  int i = 0;
+  EMACS_INT i = 0;		/* Used inside READ_QUADRUPLET_BYTE */
   char *e = to;
   unsigned char c;
   unsigned long value;
-  int nchars = 0;
+  EMACS_INT nchars = 0;
 
   while (1)
     {
@@ -3834,7 +3690,7 @@ make_hash_table (Lisp_Object test, Lisp_Object size, Lisp_Object rehash_size,
 /* Return a copy of hash table H1.  Keys and values are not copied,
    only the table itself is.  */
 
-Lisp_Object
+static Lisp_Object
 copy_hash_table (struct Lisp_Hash_Table *h1)
 {
   Lisp_Object table;
@@ -4042,7 +3898,7 @@ hash_remove_from_table (struct Lisp_Hash_Table *h, Lisp_Object key)
 
 /* Clear hash table H.  */
 
-void
+static void
 hash_clear (struct Lisp_Hash_Table *h)
 {
   if (h->count > 0)
@@ -4712,13 +4568,13 @@ guesswork fails.  Normally, an error is signaled in such case.  */)
   unsigned char digest[16];
   unsigned char value[33];
   int i;
-  int size;
-  int size_byte = 0;
-  int start_char = 0, end_char = 0;
-  int start_byte = 0, end_byte = 0;
-  register int b, e;
+  EMACS_INT size;
+  EMACS_INT size_byte = 0;
+  EMACS_INT start_char = 0, end_char = 0;
+  EMACS_INT start_byte = 0, end_byte = 0;
+  register EMACS_INT b, e;
   register struct buffer *bp;
-  int temp;
+  EMACS_INT temp;
 
   if (STRINGP (object))
     {
@@ -4889,7 +4745,7 @@ guesswork fails.  Normally, an error is signaled in such case.  */)
 	object = code_convert_string (object, coding_system, Qnil, 1, 0, 0);
     }
 
-  md5_buffer (SDATA (object) + start_byte,
+  md5_buffer (SSDATA (object) + start_byte,
 	      SBYTES (object) - (size_byte - end_byte),
 	      digest);
 
@@ -4972,7 +4828,7 @@ syms_of_fns (void)
 
   Fset (Qyes_or_no_p_history, Qnil);
 
-  DEFVAR_LISP ("features", &Vfeatures,
+  DEFVAR_LISP ("features", Vfeatures,
     doc: /* A list of symbols which are the features of the executing Emacs.
 Used by `featurep' and `require', and altered by `provide'.  */);
   Vfeatures = Fcons (intern_c_string ("emacs"), Qnil);
@@ -4990,7 +4846,7 @@ Used by `featurep' and `require', and altered by `provide'.  */);
   staticpro (&Qpaper);
 #endif	/* HAVE_LANGINFO_CODESET */
 
-  DEFVAR_BOOL ("use-dialog-box", &use_dialog_box,
+  DEFVAR_BOOL ("use-dialog-box", use_dialog_box,
     doc: /* *Non-nil means mouse commands use dialog boxes to ask questions.
 This applies to `y-or-n-p' and `yes-or-no-p' questions asked by commands
 invoked by mouse clicks and mouse menu items.
@@ -4999,7 +4855,7 @@ On some platforms, file selection dialogs are also enabled if this is
 non-nil.  */);
   use_dialog_box = 1;
 
-  DEFVAR_BOOL ("use-file-dialog", &use_file_dialog,
+  DEFVAR_BOOL ("use-file-dialog", use_file_dialog,
     doc: /* *Non-nil means mouse commands use a file dialog to ask for files.
 This applies to commands from menus and tool bar buttons even when
 they are initiated from the keyboard.  If `use-dialog-box' is nil,
@@ -5058,7 +4914,6 @@ this variable.  */);
   defsubr (&Smapcar);
   defsubr (&Smapc);
   defsubr (&Smapconcat);
-  defsubr (&Sy_or_n_p);
   defsubr (&Syes_or_no_p);
   defsubr (&Sload_average);
   defsubr (&Sfeaturep);
@@ -5081,6 +4936,3 @@ void
 init_fns (void)
 {
 }
-
-/* arch-tag: 787f8219-5b74-46bd-8469-7e1cc475fa31
-   (do not change this comment) */

@@ -1,7 +1,6 @@
-;;; mouse-sel.el --- multi-click selection support for Emacs 19
+;;; mouse-sel.el --- multi-click selection support
 
-;; Copyright (C) 1993, 1994, 1995, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1993-1995, 2001-2011  Free Software Foundation, Inc.
 
 ;; Author: Mike Williams <mdub@bigfoot.com>
 ;; Keywords: mouse
@@ -98,7 +97,7 @@
 ;;
 ;;       Selection/kill-ring interaction is retained
 ;;         interprogram-cut-function   = x-select-text
-;;         interprogram-paste-function = x-cut-buffer-or-selection-value
+;;         interprogram-paste-function = x-selection-value
 ;;
 ;;       What you lose is the ability to select some text in
 ;;       delete-selection-mode and yank over the top of it.
@@ -299,7 +298,7 @@ where   SELECTION-NAME          = name of selection
 	SELECTION-THING-SYMBOL 	= name of variable where the current selection
  				  type for this selection should be stored.")
 
-(declare-function x-select-text "term/x-win" (text &optional push))
+(declare-function x-select-text "term/common-win" (text))
 
 (defvar mouse-sel-set-selection-function
   (if (eq mouse-sel-default-bindings 'interprogram-cut-paste)
@@ -314,15 +313,15 @@ Called with two arguments:
   SELECTION, the name of the selection concerned, and
   VALUE, the text to store.
 
-This sets the selection as well as the cut buffer for the older applications,
-unless `mouse-sel-default-bindings' is `interprogram-cut-paste'.")
+This sets the selection, unless `mouse-sel-default-bindings'
+is `interprogram-cut-paste'.")
 
-(declare-function x-cut-buffer-or-selection-value "term/x-win" ())
+(declare-function x-selection-value "term/x-win" ())
 
 (defvar mouse-sel-get-selection-function
   (lambda (selection)
     (if (eq selection 'PRIMARY)
-	(or (x-cut-buffer-or-selection-value)
+	(or (x-selection-value)
 	    (bound-and-true-p x-last-selected-text)
 	    (bound-and-true-p x-last-selected-text-primary))
       (x-get-selection selection)))
@@ -749,5 +748,4 @@ If `mouse-yank-at-point' is non-nil, insert at point instead."
 
 (provide 'mouse-sel)
 
-;; arch-tag: 86e6c73f-deaa-48d3-a24e-c565fda1f7d7
 ;;; mouse-sel.el ends here

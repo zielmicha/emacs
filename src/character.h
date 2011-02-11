@@ -1,7 +1,7 @@
 /* Header for multibyte character handler.
    Copyright (C) 1995, 1997, 1998 Electrotechnical Laboratory, JAPAN.
      Licensed to the Free Software Foundation.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
      National Institute of Advanced Industrial Science and Technology (AIST)
      Registration Number H13PRO009
 
@@ -603,43 +603,31 @@ extern int string_char (const unsigned char *,
 
 extern int translate_char (Lisp_Object, int c);
 extern int char_printable_p (int c);
-extern void parse_str_as_multibyte (const unsigned char *, int, int *,
-                                    int *);
-extern int parse_str_to_multibyte (const unsigned char *, int);
-extern int str_as_multibyte (unsigned char *, int, int, int *);
-extern int str_to_multibyte (unsigned char *, int, int);
-extern int str_as_unibyte (unsigned char *, int);
+extern void parse_str_as_multibyte (const unsigned char *,
+				    EMACS_INT, EMACS_INT *, EMACS_INT *);
+extern EMACS_INT parse_str_to_multibyte (const unsigned char *, EMACS_INT);
+extern EMACS_INT str_as_multibyte (unsigned char *, EMACS_INT, EMACS_INT,
+			     EMACS_INT *);
+extern EMACS_INT str_to_multibyte (unsigned char *, EMACS_INT, EMACS_INT);
+extern EMACS_INT str_as_unibyte (unsigned char *, EMACS_INT);
 extern EMACS_INT str_to_unibyte (const unsigned char *, unsigned char *,
                                  EMACS_INT, int);
-extern int strwidth (const unsigned char *, int);
-extern int c_string_width (const unsigned char *, int, int, int *, int *);
-extern int lisp_string_width (Lisp_Object, int, int *, int *);
-
-extern Lisp_Object Vprintable_chars;
+extern EMACS_INT strwidth (const unsigned char *, EMACS_INT);
+extern EMACS_INT c_string_width (const unsigned char *, EMACS_INT, int,
+				 EMACS_INT *, EMACS_INT *);
+extern EMACS_INT lisp_string_width (Lisp_Object, int,
+				    EMACS_INT *, EMACS_INT *);
 
 extern Lisp_Object Qcharacterp, Qauto_fill_chars;
-extern Lisp_Object Vtranslation_table_vector;
-extern Lisp_Object Vchar_width_table;
-extern Lisp_Object Vchar_direction_table;
 extern Lisp_Object Vchar_unify_table;
-extern Lisp_Object Vunicode_category_table;
-
 extern Lisp_Object string_escape_byte8 (Lisp_Object);
 
 /* Return a translation table of id number ID.  */
 #define GET_TRANSLATION_TABLE(id) \
   (XCDR(XVECTOR(Vtranslation_table_vector)->contents[(id)]))
 
-/* A char-table for characters which may invoke auto-filling.  */
-extern Lisp_Object Vauto_fill_chars;
-
-extern Lisp_Object Vchar_script_table;
-extern Lisp_Object Vscript_representative_chars;
-
 #define DEFSYM(sym, name)	\
   do { (sym) = intern_c_string ((name)); staticpro (&(sym)); } while (0)
 
 #endif /* EMACS_CHARACTER_H */
 
-/* arch-tag: 4ef86004-2eff-4073-8cea-cfcbcf7188ac
-   (do not change this comment) */

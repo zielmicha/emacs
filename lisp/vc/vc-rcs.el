@@ -1,11 +1,10 @@
 ;;; vc-rcs.el --- support for RCS version-control
 
-;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-;;   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1992-2011  Free Software Foundation, Inc.
 
 ;; Author:     FSF (see vc.el for full credits)
 ;; Maintainer: Andre Spiegel <spiegel@gnu.org>
+;; Package: vc
 
 ;; This file is part of GNU Emacs.
 
@@ -76,10 +75,10 @@ If nil, use the value of `vc-diff-switches'.  If t, use no switches."
   :version "21.1"
   :group 'vc)
 
-(defcustom vc-rcs-header (or (cdr (assoc 'RCS vc-header-alist)) '("\$Id\$"))
+(defcustom vc-rcs-header '("\$Id\$")
   "Header keywords to be inserted by `vc-insert-headers'."
   :type '(repeat string)
-  :version "21.1"
+  :version "24.1"     ; no longer consult the obsolete vc-header-alist
   :group 'vc)
 
 (defcustom vc-rcsdiff-knows-brief nil
@@ -348,7 +347,7 @@ whether to remove it."
 	 (yes-or-no-p (format "Directory %s is empty; remove it? " dir))
 	 (delete-directory dir))))
 
-(defun vc-rcs-checkin (files rev comment &optional extra-args-ignored)
+(defun vc-rcs-checkin (files rev comment)
   "RCS-specific version of `vc-backend-checkin'."
   (let ((switches (vc-switches 'RCS 'checkin)))
     ;; Now operate on the files
@@ -1466,5 +1465,4 @@ The `:insn' key is a keyword to distinguish it as a vc-rcs.el extension."
 
 (provide 'vc-rcs)
 
-;; arch-tag: 759b4916-5b0d-431d-b647-b185b8c652cf
 ;;; vc-rcs.el ends here

@@ -1,6 +1,6 @@
 ;;; css-mode.el --- Major mode to edit CSS files
 
-;; Copyright (C) 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 2006-2011  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Keywords: hypermedia
@@ -264,7 +264,6 @@
 (defvar css-font-lock-defaults
   '(css-font-lock-keywords nil t))
 
-;;;###autoload (add-to-list 'auto-mode-alist (cons (purecopy "\\.css\\'") 'css-mode))
 ;;;###autoload
 (define-derived-mode css-mode fundamental-mode "CSS"
   "Major mode to edit Cascading Style Sheets."
@@ -484,5 +483,4 @@
         (indent-line-to indent)))))
 
 (provide 'css-mode)
-;; arch-tag: b4d8b8e2-b130-4e74-b3aa-cd8f1ab659d0
 ;;; css-mode.el ends here

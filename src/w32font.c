@@ -1,5 +1,5 @@
 /* Font backend for the Microsoft W32 API.
-   Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2007-2011 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -99,9 +99,6 @@ static Lisp_Object Qw32_charset_baltic, Qw32_charset_russian;
 static Lisp_Object Qw32_charset_arabic, Qw32_charset_greek;
 static Lisp_Object Qw32_charset_hebrew, Qw32_charset_vietnamese;
 static Lisp_Object Qw32_charset_thai, Qw32_charset_johab, Qw32_charset_mac;
-
-/* Associative list linking character set strings to Windows codepages. */
-static Lisp_Object Vw32_charset_info_alist;
 
 /* Font spacing symbols - defined in font.c.  */
 extern Lisp_Object Qc, Qp, Qm;
@@ -333,7 +330,7 @@ w32font_has_char (Lisp_Object entity, int c)
 }
 
 /* w32 implementation of encode_char for font backend.
-   Return a glyph code of FONT for characer C (Unicode code point).
+   Return a glyph code of FONT for character C (Unicode code point).
    If FONT doesn't have such a glyph, return FONT_INVALID_CODE.
 
    For speed, the gdi backend uses unicode (Emacs calls encode_char
@@ -1058,7 +1055,7 @@ w32_enumfont_pattern_entity (Lisp_Object frame,
 
 
 /* Convert generic families to the family portion of lfPitchAndFamily.  */
-BYTE
+static BYTE
 w32_generic_family (Lisp_Object name)
 {
   /* Generic families.  */
@@ -1798,7 +1795,7 @@ w32_decode_weight (int fnweight)
   if (fnweight >= FW_NORMAL)     return 100;
   if (fnweight >= FW_LIGHT)      return 50;
   if (fnweight >= FW_EXTRALIGHT) return 40;
-  if (fnweight > FW_THIN)        return 20;
+  if (fnweight >  FW_THIN)       return 20;
   return 0;
 }
 
@@ -1812,7 +1809,7 @@ w32_encode_weight (int n)
   if (n >= 100) return FW_NORMAL;
   if (n >= 50)  return FW_LIGHT;
   if (n >= 40)  return FW_EXTRALIGHT;
-  if (n >= 20)  return  FW_THIN;
+  if (n >= 20)  return FW_THIN;
   return 0;
 }
 
@@ -1822,9 +1819,9 @@ static Lisp_Object
 w32_to_fc_weight (int n)
 {
   if (n >= FW_EXTRABOLD) return intern ("black");
-  if (n >= FW_BOLD) return intern ("bold");
-  if (n >= FW_SEMIBOLD) return intern ("demibold");
-  if (n >= FW_NORMAL) return intern ("medium");
+  if (n >= FW_BOLD)      return intern ("bold");
+  if (n >= FW_SEMIBOLD)  return intern ("demibold");
+  if (n >= FW_NORMAL)    return intern ("medium");
   return intern ("light");
 }
 
@@ -1911,7 +1908,6 @@ fill_in_logfont (FRAME_PTR f, LOGFONT *logfont, Lisp_Object font_spec)
       if (family != FF_DONTCARE)
         logfont->lfPitchAndFamily = family | DEFAULT_PITCH;
     }
-
 
   /* Set pitch based on the spacing property.  */
   tmp = AREF (font_spec, FONT_SPACING_INDEX);
@@ -2378,6 +2374,23 @@ in the font selection dialog. */)
   return DECODE_SYSTEM (build_string (buf));
 }
 
+static const char *const w32font_booleans [] = {
+  NULL,
+};
+
+static const char *const w32font_non_booleans [] = {
+  ":script",
+  ":antialias",
+  ":style",
+  NULL,
+};
+
+static void
+w32font_filter_properties (Lisp_Object font, Lisp_Object alist)
+{
+  font_filter_properties (font, alist, w32font_booleans, w32font_non_booleans);
+}
+
 struct font_driver w32font_driver =
   {
     0, /* Qgdi */
@@ -2407,7 +2420,7 @@ struct font_driver w32font_driver =
     NULL, /* shape */
     NULL, /* check */
     NULL, /* get_variation_glyphs */
-    NULL, /* filter_properties */
+    w32font_filter_properties,
   };
 
 
@@ -2519,7 +2532,7 @@ syms_of_w32font (void)
 
   /* W32 font encodings.  */
   DEFVAR_LISP ("w32-charset-info-alist",
-               &Vw32_charset_info_alist,
+               Vw32_charset_info_alist,
                doc: /* Alist linking Emacs character sets to Windows fonts and codepages.
 Each entry should be of the form:
 
@@ -2568,5 +2581,3 @@ versions of Windows) characters.  */);
   register_font_driver (&w32font_driver, NULL);
 }
 
-/* arch-tag: 65b8a3cd-46aa-4c0d-a1f3-99e75b9c07ee
-   (do not change this comment) */

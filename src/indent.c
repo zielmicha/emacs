@@ -1,6 +1,5 @@
 /* Indentation functions.
-   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1998, 2000, 2001,
-                 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Copyright (C) 1985-1988, 1993-1995, 1998, 2000-2011
                  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
@@ -37,11 +36,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include "intervals.h"
 #include "dispextern.h"
 #include "region-cache.h"
-
-/* Indentation can insert tabs if this is non-zero;
-   otherwise always uses spaces.  */
-
-static int indent_tabs_mode;
 
 #define CR 015
 
@@ -865,7 +859,7 @@ following any initial whitespace.  */)
   (void)
 {
   Lisp_Object val;
-  int opoint = PT, opoint_byte = PT_BYTE;
+  EMACS_INT opoint = PT, opoint_byte = PT_BYTE;
 
   scan_newline (PT, PT_BYTE, BEGV, BEGV_BYTE, -1, 1);
 
@@ -964,10 +958,10 @@ position_indentation (register int pos_byte)
    preceding line.  */
 
 int
-indented_beyond_p (int pos, int pos_byte, double column)
+indented_beyond_p (EMACS_INT pos, EMACS_INT pos_byte, double column)
 {
   double val;
-  int opoint = PT, opoint_byte = PT_BYTE;
+  EMACS_INT opoint = PT, opoint_byte = PT_BYTE;
 
   SET_PT_BOTH (pos, pos_byte);
   while (PT > BEGV && FETCH_BYTE (PT_BYTE) == '\n')
@@ -1254,7 +1248,7 @@ compute_motion (EMACS_INT from, EMACS_INT fromvpos, EMACS_INT fromhpos, int did_
 	       to be changed here.  */
 	    {
 	      unsigned char *ovstr;
-	      int ovlen = overlay_strings (pos, win, &ovstr);
+	      EMACS_INT ovlen = overlay_strings (pos, win, &ovstr);
 	      hpos += ((multibyte && ovlen > 0)
 		       ? strwidth (ovstr, ovlen) : ovlen);
 	    }
@@ -1448,7 +1442,7 @@ compute_motion (EMACS_INT from, EMACS_INT fromvpos, EMACS_INT fromhpos, int did_
          the text character-by-character.  */
       if (current_buffer->width_run_cache && pos >= next_width_run)
         {
-          int run_end;
+          EMACS_INT run_end;
           int common_width
             = region_cache_forward (current_buffer,
                                     current_buffer->width_run_cache,
@@ -1459,7 +1453,7 @@ compute_motion (EMACS_INT from, EMACS_INT fromvpos, EMACS_INT fromhpos, int did_
              want to skip over it for some other reason.  */
           if (common_width != 0)
             {
-              int run_end_hpos;
+              EMACS_INT run_end_hpos;
 
               /* Don't go past the final buffer posn the user
                  requested.  */
@@ -2052,7 +2046,7 @@ whether or not it is currently displayed in some window.  */)
 	    it_overshoot_expected = 1;
 	  else if (it.method == GET_FROM_STRING)
 	    {
-	      const char *s = SDATA (it.string);
+	      const char *s = SSDATA (it.string);
 	      const char *e = s + SBYTES (it.string);
 	      while (s < e && *s != '\n')
 		++s;
@@ -2159,7 +2153,7 @@ whether or not it is currently displayed in some window.  */)
 void
 syms_of_indent (void)
 {
-  DEFVAR_BOOL ("indent-tabs-mode", &indent_tabs_mode,
+  DEFVAR_BOOL ("indent-tabs-mode", indent_tabs_mode,
 	       doc: /* *Indentation can insert tabs if this is non-nil.  */);
   indent_tabs_mode = 1;
 
@@ -2170,6 +2164,3 @@ syms_of_indent (void)
   defsubr (&Svertical_motion);
   defsubr (&Scompute_motion);
 }
-
-/* arch-tag: 9adfea44-71f7-4988-8ee3-96da15c502cc
-   (do not change this comment) */

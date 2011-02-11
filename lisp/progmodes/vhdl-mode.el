@@ -1,8 +1,6 @@
 ;;; vhdl-mode.el --- major mode for editing VHDL code
 
-;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-;;   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1992-2011  Free Software Foundation, Inc.
 
 ;; Authors:     Reto Zimmermann <reto@gnu.org>
 ;;              Rodney J. Whitby <software.vhdl-mode@rwhitby.net>
@@ -4117,7 +4115,10 @@ The directory of the current source file is scanned."
 ;; performs all buffer local initializations
 
 ;;;###autoload
-(defun vhdl-mode ()
+(define-derived-mode vhdl-mode prog-mode
+  '("VHDL" (vhdl-electric-mode "/" (vhdl-stutter-mode "/"))
+           (vhdl-electric-mode "e")
+           (vhdl-stutter-mode "s"))
   "Major mode for editing VHDL code.
 
 Usage:
@@ -4650,26 +4651,13 @@ Key bindings:
 -------------
 
 \\{vhdl-mode-map}"
-  (interactive)
-  (kill-all-local-variables)
-  (setq major-mode 'vhdl-mode)
-  (setq mode-name '("VHDL"
-                    (vhdl-electric-mode "/" (vhdl-stutter-mode "/"))
-                    (vhdl-electric-mode "e")
-                    (vhdl-stutter-mode "s")))
-
-  ;; set maps and tables
-  (use-local-map vhdl-mode-map)
-  (set-syntax-table vhdl-mode-syntax-table)
-  (setq local-abbrev-table vhdl-mode-abbrev-table)
+  :abbrev-table vhdl-mode-abbrev-table
 
   ;; set local variables
   (set (make-local-variable 'paragraph-start)
        "\\s-*\\(--+\\s-*$\\|[^ -]\\|$\\)")
   (set (make-local-variable 'paragraph-separate) paragraph-start)
   (set (make-local-variable 'paragraph-ignore-fill-prefix) t)
-  (set (make-local-variable 'require-final-newline)
-       (if vhdl-emacs-22 mode-require-final-newline t))
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
   (set (make-local-variable 'indent-line-function) 'vhdl-indent-line)
   (set (make-local-variable 'comment-start) "--")
@@ -4686,15 +4674,21 @@ Key bindings:
   ;; setup the comment indent variable in a Emacs version portable way
   ;; ignore any byte compiler warnings you might get here
   (when (boundp 'comment-indent-function)
-    (make-local-variable 'comment-indent-function)
-    (setq comment-indent-function 'vhdl-comment-indent))
+    (set (make-local-variable 'comment-indent-function) 'vhdl-comment-indent))
 
   ;; initialize font locking
   (set (make-local-variable 'font-lock-defaults)
        (list
 	'(nil vhdl-font-lock-keywords) nil
-	(not vhdl-highlight-case-sensitive) '((?\_ . "w")) 'beginning-of-line
-	'(font-lock-syntactic-keywords . vhdl-font-lock-syntactic-keywords)))
+	(not vhdl-highlight-case-sensitive) '((?\_ . "w")) 'beginning-of-line))
+  (if (eval-when-compile (fboundp 'syntax-propertize-rules))
+      (set (make-local-variable 'syntax-propertize-function)
+           (syntax-propertize-rules
+            ;; Mark single quotes as having string quote syntax in
+            ;; 'c' instances.
+            ("\\(\'\\).\\(\'\\)" (1 "\"'") (2 "\"'"))))
+    (set (make-local-variable 'font-lock-syntactic-keywords)
+         vhdl-font-lock-syntactic-keywords))
   (unless vhdl-emacs-21
     (set (make-local-variable 'font-lock-support-mode) 'lazy-lock-mode)
     (set (make-local-variable 'lazy-lock-defer-contextually) nil)
@@ -4724,12 +4718,7 @@ Key bindings:
   (vhdl-ps-print-init)
   (vhdl-write-file-hooks-init)
   (message "VHDL Mode %s.%s" vhdl-version
-	   (if noninteractive "" "  See menu for documentation and release notes."))
-
-  ;; run hooks
-  (if vhdl-emacs-22
-      (run-mode-hooks 'vhdl-mode-hook)
-    (run-hooks 'vhdl-mode-hook)))
+	   (if noninteractive "" "  See menu for documentation and release notes.")))
 
 (defun vhdl-activate-customizations ()
   "Activate all customizations on local variables."
@@ -4747,10 +4736,10 @@ Key bindings:
 (defun vhdl-write-file-hooks-init ()
   "Add/remove hooks when buffer is saved."
   (if vhdl-modify-date-on-saving
-      (add-hook 'local-write-file-hooks 'vhdl-template-modify-noerror)
-    (remove-hook 'local-write-file-hooks 'vhdl-template-modify-noerror))
-  (make-local-variable 'after-save-hook)
-  (add-hook 'after-save-hook 'vhdl-add-modified-file))
+      (add-hook 'local-write-file-hooks 'vhdl-template-modify-noerror nil t)
+    (remove-hook 'local-write-file-hooks 'vhdl-template-modify-noerror t))
+  (if (featurep 'xemacs) (make-local-hook 'after-save-hook))
+  (add-hook 'after-save-hook 'vhdl-add-modified-file nil t))
 
 (defun vhdl-process-command-line-option (option)
   "Process command line options for VHDL Mode."
@@ -5264,13 +5253,12 @@ argument.  The styles are chosen from the `vhdl-style-alist' variable."
       (lambda (varentry)
 	(let ((var (car varentry))
 	      (val (cdr varentry)))
-	  (and local
-	       (make-local-variable var))
 	  ;; special case for vhdl-offsets-alist
 	  (if (not (eq var 'vhdl-offsets-alist))
-	      (set var val)
+	      (set (if local (make-local-variable var) var) val)
 	    ;; reset vhdl-offsets-alist to the default value first
-	    (setq vhdl-offsets-alist (copy-alist vhdl-offsets-alist-default))
+	    (set (if local (make-local-variable var) var)
+                 (copy-alist vhdl-offsets-alist-default))
 	    ;; now set the langelems that are different
 	    (mapcar
 	     (function
@@ -7262,7 +7250,7 @@ indentation is done before aligning."
        (save-excursion
 	 (goto-char begin)
 	 (let (element
-	       (eol (save-excursion (progn (end-of-line) (point)))))
+	       (eol (point-at-eol)))
 	   (setq element (nth 0 copy))
 	   (when (and (or (and (listp (car element))
 			       (memq major-mode (car element)))
@@ -7288,7 +7276,7 @@ the token in MATCH."
       ;; Determine the greatest whitespace distance to the alignment
       ;; character
       (goto-char begin)
-      (setq eol (progn (end-of-line) (point))
+      (setq eol (point-at-eol)
 	    bol (setq begin (progn (beginning-of-line) (point))))
       (while (< bol end)
 	(save-excursion
@@ -7299,13 +7287,13 @@ the token in MATCH."
 	      (setq max distance))))
 	(forward-line)
 	(setq bol (point)
-	      eol (save-excursion (end-of-line) (point)))
+	      eol (point-at-eol))
 	(setq lines (1+ lines)))
       ;; Now insert enough maxs to push each assignment operator to
       ;; the same column.  We need to use 'lines' as a counter, since
       ;; the location of the mark may change
       (goto-char (setq bol begin))
-      (setq eol (save-excursion (end-of-line) (point)))
+      (setq eol (point-at-eol))
       (while (> lines 0)
   	(when (and (re-search-forward match eol t)
 		   (not (vhdl-in-literal)))
@@ -7317,7 +7305,7 @@ the token in MATCH."
 	(beginning-of-line)
 	(forward-line)
 	(setq bol (point)
-	      eol (save-excursion (end-of-line) (point)))
+	      eol (point-at-eol))
 	(setq lines (1- lines))))))
 
 (defun vhdl-align-region-groups (beg end &optional spacing
@@ -7981,7 +7969,7 @@ buffer."
 	   (forward-char)
 	   (vhdl-forward-syntactic-ws))
 	 (goto-char end)
-	 (when (> pos (save-excursion (end-of-line) (point)))
+	 (when (> pos (point-at-eol))
 	   (error "ERROR:  Not within a generic/port clause"))
 	 ;; delete closing parenthesis on separate line (not supported style)
 	 (when (save-excursion (beginning-of-line) (looking-at "^\\s-*);"))
@@ -12108,9 +12096,7 @@ options vhdl-upper-case-{keywords,types,attributes,enum-values}."
   "Return the line number of the line containing point."
   (save-restriction
     (widen)
-    (save-excursion
-      (beginning-of-line)
-      (1+ (count-lines (point-min) (point))))))
+    (1+ (count-lines (point-min) (point-at-bol)))))
 
 (defun vhdl-line-kill-entire (&optional arg)
   "Delete entire line."
@@ -12127,8 +12113,7 @@ options vhdl-upper-case-{keywords,types,attributes,enum-values}."
   "Copy current line."
   (interactive "p")
   (save-excursion
-    (beginning-of-line)
-    (let ((position (point)))
+    (let ((position (point-at-bol)))
       (forward-line (or arg 1))
       (copy-region-as-kill position (point)))))
 
@@ -12496,10 +12481,10 @@ File statistics: \"%s\"\n\
 	    (cons (list 'vhdl-mode vhdl-hs-start-regexp nil "--\\( \\|$\\)"
 			'vhdl-hs-forward-sexp-func nil)
 		  hs-special-modes-alist)))
-    (make-local-variable 'hs-minor-mode-hook)
+    (if (featurep 'xemacs) (make-local-hook 'hs-minor-mode-hook))
     (if vhdl-hide-all-init
-	(add-hook 'hs-minor-mode-hook 'hs-hide-all)
-      (remove-hook 'hs-minor-mode-hook 'hs-hide-all))
+	(add-hook 'hs-minor-mode-hook 'hs-hide-all nil t)
+      (remove-hook 'hs-minor-mode-hook 'hs-hide-all t))
     (hs-minor-mode arg)
     (force-mode-line-update)))		; hack to update menu bar
 
@@ -12914,10 +12899,9 @@ This does background highlighting of translate-off regions.")
   "Re-initialize fontification and fontify buffer."
   (interactive)
   (setq font-lock-defaults
-	(list
-	 'vhdl-font-lock-keywords nil
-	 (not vhdl-highlight-case-sensitive) '((?\_ . "w")) 'beginning-of-line
-	 '(font-lock-syntactic-keywords . vhdl-font-lock-syntactic-keywords)))
+	`(vhdl-font-lock-keywords
+          nil ,(not vhdl-highlight-case-sensitive) ((?\_ . "w"))
+          beginning-of-line))
   (when (fboundp 'font-lock-unset-defaults)
     (font-lock-unset-defaults))		; not implemented in XEmacs
   (font-lock-set-defaults)
@@ -12967,8 +12951,8 @@ This does background highlighting of translate-off regions.")
   (if (featurep 'xemacs)
       (when (boundp 'ps-print-color-p)
 	(vhdl-ps-print-settings))
-    (make-local-variable 'ps-print-hook)
-    (add-hook 'ps-print-hook 'vhdl-ps-print-settings)))
+    (if (featurep 'xemacs) (make-local-hook 'ps-print-hook))
+    (add-hook 'ps-print-hook 'vhdl-ps-print-settings nil t)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -15910,7 +15894,7 @@ current project/directory."
 							 &optional insert-conf)
   "Generate block configuration for architecture."
   (let ((margin (current-indentation))
-	(beg (save-excursion (beginning-of-line) (point)))
+	(beg (point-at-bol))
 	ent-entry inst-entry inst-path inst-prev-path cons-key tmp-alist)
     ;; insert block configuration (for architecture)
     (vhdl-insert-keyword "FOR ") (insert arch-name "\n")
@@ -16971,5 +16955,4 @@ to visually support naming conventions.")
 
 (provide 'vhdl-mode)
 
-;; arch-tag: 780d7073-9b5d-4c6c-b0d8-26b28783aba3
 ;;; vhdl-mode.el ends here

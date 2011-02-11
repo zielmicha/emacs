@@ -1,6 +1,5 @@
 /* Functions for memory limit warnings.
-   Copyright (C) 1990, 1992, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-                 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1990, 1992, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -17,12 +16,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifdef emacs
 #include <config.h>
 #include <setjmp.h>
 #include "lisp.h"
-#endif
-
 #include "mem-limits.h"
 
 /*
@@ -302,5 +298,3 @@ memory_warnings (POINTER start, void (*warnfun) (const char *))
   lim_data = 0;
 }
 
-/* arch-tag: eab04eda-1f69-447a-8d9f-95f0a3983ca5
-   (do not change this comment) */

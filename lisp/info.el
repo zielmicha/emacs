@@ -1,8 +1,6 @@
 ;; info.el --- info package for Emacs
 
-;; Copyright (C) 1985, 1986, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985-1986, 1992-2011  Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: help
@@ -402,24 +400,28 @@ or `Info-virtual-nodes'."
        (".info.gz".   "gunzip")
        (".info.z".    "gunzip")
        (".info.bz2" . ("bzip2" "-dc"))
+       (".info.xz".   "unxz")
        (".info".      nil)
        ("-info.Z".   "uncompress")
        ("-info.Y".   "unyabba")
        ("-info.gz".  "gunzip")
        ("-info.bz2" . ("bzip2" "-dc"))
        ("-info.z".   "gunzip")
+       ("-info.xz".  "unxz")
        ("-info".     nil)
        ("/index.Z".   "uncompress")
        ("/index.Y".   "unyabba")
        ("/index.gz".  "gunzip")
        ("/index.z".   "gunzip")
        ("/index.bz2". ("bzip2" "-dc"))
+       ("/index.xz".  "unxz")
        ("/index".     nil)
        (".Z".         "uncompress")
        (".Y".         "unyabba")
        (".gz".        "gunzip")
        (".z".         "gunzip")
        (".bz2" .      ("bzip2" "-dc"))
+       (".xz".        "unxz")
        ("".           nil)))
   "List of file name suffixes and associated decoding commands.
 Each entry should be (SUFFIX . STRING); the file is given to
@@ -884,17 +886,16 @@ Value is the position at which a match was found, or nil if not found."
   (let ((case-fold-search case-fold)
 	found)
     (save-excursion
-      (when (Info-node-at-bob-matching regexp)
-	(setq found (point)))
-      (while (and (not found)
-		  (search-forward "\n\^_" nil t))
-	(forward-line 1)
-	(let ((beg (point)))
-	  (forward-line 1)
-	  (when (re-search-backward regexp beg t)
-	    (beginning-of-line)
-	    (setq found (point)))))
-      found)))
+      (if (Info-node-at-bob-matching regexp)
+          (setq found (point))
+        (while (and (not found)
+                    (search-forward "\n\^_" nil t))
+          (forward-line 1)
+          (let ((beg (point)))
+            (forward-line 1)
+            (if (re-search-backward regexp beg t)
+                (setq found (line-beginning-position)))))))
+    found))
 
 (defun Info-find-node-in-buffer (regexp)
   "Find a node or anchor in the current buffer.
@@ -2319,11 +2320,8 @@ new buffer."
 	 completions default alt-default (start-point (point)) str i bol eol)
      (save-excursion
        ;; Store end and beginning of line.
-       (end-of-line)
-       (setq eol (point))
-       (beginning-of-line)
-       (setq bol (point))
-
+       (setq eol (line-end-position)
+             bol (line-beginning-position))
        (goto-char (point-min))
        (while (re-search-forward "\\*note[ \n\t]+\\([^:]*\\):" nil t)
 	 (setq str (match-string-no-properties 1))
@@ -2839,12 +2837,9 @@ parent node."
 	 (virtual-end
 	  (and Info-scroll-prefer-subnodes
 	       (save-excursion
-		 (beginning-of-line)
-		 (setq current-point (point))
+		 (setq current-point (line-beginning-position))
 		 (goto-char (point-min))
-		 (search-forward "\n* Menu:"
-				 current-point
-				 t)))))
+		 (search-forward "\n* Menu:" current-point t)))))
     (if (or virtual-end
 	    (pos-visible-in-window-p (point-min) nil t))
 	(Info-last-preorder)
@@ -3372,10 +3367,11 @@ Build a menu of the possible matches."
   filename)
 
 (defvar finder-known-keywords)
-(defvar finder-package-info)
 (declare-function find-library-name "find-func" (library))
 (declare-function finder-unknown-keywords "finder" ())
 (declare-function lm-commentary "lisp-mnt" (&optional file))
+(defvar finder-keywords-hash)
+(defvar package-alist)                  ; finder requires package
 
 (defun Info-finder-find-node (filename nodename &optional no-going-back)
   "Finder-specific implementation of Info-find-node-2."
@@ -3388,15 +3384,14 @@ Build a menu of the possible matches."
     (insert "Finder Keywords\n")
     (insert "***************\n\n")
     (insert "* Menu:\n\n")
-    (mapc
-     (lambda (assoc)
-       (let ((keyword (car assoc)))
-	 (insert (format "* %-14s %s.\n"
-			 (concat (symbol-name keyword) "::")
-			 (cdr assoc)))))
-     (append '((all . "All package info")
-	       (unknown . "unknown keywords"))
-	   finder-known-keywords)))
+    (dolist (assoc (append '((all . "All package info")
+			     (unknown . "unknown keywords"))
+			   finder-known-keywords))
+      (let ((keyword (car assoc)))
+	(insert (format "* %s %s.\n"
+			(concat (symbol-name keyword) ": "
+				"kw:" (symbol-name keyword) ".")
+			(cdr assoc))))))
    ((equal nodename "unknown")
     ;; Display unknown keywords
     (insert (format "\n\^_\nFile: %s,  Node: %s,  Up: Top\n\n"
@@ -3416,17 +3411,36 @@ Build a menu of the possible matches."
 		    Info-finder-file nodename))
     (insert "Finder Package Info\n")
     (insert "*******************\n\n")
-    (mapc (lambda (package)
-	    (insert (format "%s - %s\n"
-			    (format "*Note %s::" (nth 0 package))
-			    (nth 1 package)))
-	    (insert "Keywords: "
-		    (mapconcat (lambda (keyword)
-				 (format "*Note %s::" (symbol-name keyword)))
-			       (nth 2 package) ", ")
-		    "\n\n"))
-	  finder-package-info))
-   ((string-match-p "\\.el\\'" nodename)
+    (dolist (package package-alist)
+      (insert (format "%s - %s\n"
+		      (format "*Note %s::" (nth 0 package))
+		      (nth 1 package)))))
+   ((string-match "\\`kw:" nodename)
+    (setq nodename (substring nodename (match-end 0)))
+    ;; Display packages that match the keyword
+    ;; or the list of keywords separated by comma.
+    (insert (format "\n\^_\nFile: %s,  Node: kw:%s,  Up: Top\n\n"
+		    Info-finder-file nodename))
+    (insert "Finder Packages\n")
+    (insert "***************\n\n")
+    (insert
+     "The following packages match the keyword `" nodename "':\n\n")
+    (insert "* Menu:\n\n")
+    (let ((keywords
+	   (mapcar 'intern (if (string-match-p "," nodename)
+			       (split-string nodename ",[ \t\n]*" t)
+			     (list nodename))))
+	  hits desc)
+      (dolist (kw keywords)
+	(push (copy-tree (gethash kw finder-keywords-hash)) hits))
+      (setq hits (delete-dups (apply 'append hits)))
+      (dolist (package hits)
+	(setq desc (cdr-safe (assq package package-alist)))
+	(when (vectorp desc)
+	  (insert (format "* %-16s %s.\n"
+			  (concat (symbol-name package) "::")
+			  (aref desc 2)))))))
+   (t
     ;; Display commentary section
     (insert (format "\n\^_\nFile: %s,  Node: %s,  Up: Top\n\n"
 		    Info-finder-file nodename))
@@ -3447,29 +3461,7 @@ Build a menu of the possible matches."
 	   (goto-char (point-min))
 	   (while (re-search-forward "^;+ ?" nil t)
 	     (replace-match "" nil nil))
-	   (buffer-string))))))
-   (t
-    ;; Display packages that match the keyword
-    ;; or the list of keywords separated by comma.
-    (insert (format "\n\^_\nFile: %s,  Node: %s,  Up: Top\n\n"
-		    Info-finder-file nodename))
-    (insert "Finder Packages\n")
-    (insert "***************\n\n")
-    (insert
-     "The following packages match the keyword `" nodename "':\n\n")
-    (insert "* Menu:\n\n")
-    (let ((keywords
-	   (mapcar 'intern (if (string-match-p "," nodename)
-			       (split-string nodename ",[ \t\n]*" t)
-			     (list nodename)))))
-      (mapc
-       (lambda (package)
-	 (unless (memq nil (mapcar (lambda (k) (memq k (nth 2 package)))
-				   keywords))
-	   (insert (format "* %-16s %s.\n"
-			   (concat (nth 0 package) "::")
-			   (nth 1 package)))))
-       finder-package-info)))))
+	   (buffer-string))))))))
 
 ;;;###autoload
 (defun info-finder (&optional keywords)
@@ -3769,21 +3761,30 @@ If FORK is non-nil, it is passed to `Info-goto-node'."
   (let ((map (make-sparse-keymap)))
     (tool-bar-local-item-from-menu 'Info-history-back "left-arrow" map Info-mode-map
 				   :rtl "right-arrow"
-				   :label "Back")
+				   :label "Back"
+				   :vert-only t)
     (tool-bar-local-item-from-menu 'Info-history-forward "right-arrow" map Info-mode-map
 				   :rtl "left-arrow"
-				   :label "Forward")
+				   :label "Forward"
+				   :vert-only t)
+    (define-key-after map [separator-1] menu-bar-separator)
     (tool-bar-local-item-from-menu 'Info-prev "prev-node" map Info-mode-map
 				   :rtl "next-node")
     (tool-bar-local-item-from-menu 'Info-next "next-node" map Info-mode-map
 				   :rtl "prev-node")
-    (tool-bar-local-item-from-menu 'Info-up "up-node" map Info-mode-map)
-    (tool-bar-local-item-from-menu 'Info-top-node "home" map Info-mode-map)
+    (tool-bar-local-item-from-menu 'Info-up "up-node" map Info-mode-map
+				   :vert-only t)
+    (define-key-after map [separator-2] menu-bar-separator)
+    (tool-bar-local-item-from-menu 'Info-top-node "home" map Info-mode-map
+				   :vert-only t)
     (tool-bar-local-item-from-menu 'Info-goto-node "jump-to" map Info-mode-map)
+    (define-key-after map [separator-3] menu-bar-separator)
     (tool-bar-local-item-from-menu 'Info-index "index" map Info-mode-map
-				   :label "Index Search")
-    (tool-bar-local-item-from-menu 'Info-search "search" map Info-mode-map)
-    (tool-bar-local-item-from-menu 'Info-exit "exit" map Info-mode-map)
+				   :label "Index")
+    (tool-bar-local-item-from-menu 'Info-search "search" map Info-mode-map
+				   :vert-only t)
+    (tool-bar-local-item-from-menu 'Info-exit "exit" map Info-mode-map
+				   :vert-only t)
     map))
 
 (defvar Info-menu-last-node nil)
@@ -4931,5 +4932,4 @@ type returned by `Info-bookmark-make-record', which see."
 
 (provide 'info)
 
-;; arch-tag: f2480fe2-2139-40c1-a49b-6314991164ac
 ;;; info.el ends here

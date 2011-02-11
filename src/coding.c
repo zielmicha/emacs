@@ -1,8 +1,7 @@
 /* Coding system handler (conversion, detection, etc).
-   Copyright (C) 2001, 2002, 2003, 2004, 2005,
-                 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2001-2011 Free Software Foundation, Inc.
    Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-     2005, 2006, 2007, 2008, 2009, 2010
+     2005, 2006, 2007, 2008, 2009, 2010, 2011
      National Institute of Advanced Industrial Science and Technology (AIST)
      Registration Number H14PRO021
    Copyright (C) 2003
@@ -166,7 +165,7 @@ detect_coding_XXX (struct coding_system *coding,
 
   while (1)
     {
-      /* Get one byte from the source.  If the souce is exausted, jump
+      /* Get one byte from the source.  If the source is exhausted, jump
 	 to no_more_source:.  */
       ONE_MORE_BYTE (c);
 
@@ -180,7 +179,7 @@ detect_coding_XXX (struct coding_system *coding,
   return 0;
 
  no_more_source:
-  /* The source exausted successfully.  */
+  /* The source exhausted successfully.  */
   detect_info->found |= found;
   return 1;
 }
@@ -327,16 +326,6 @@ Lisp_Object Qinterrupted, Qinsufficient_memory;
    symbol as a coding system.  */
 static Lisp_Object Qcoding_system_define_form;
 
-int coding_system_require_warning;
-
-Lisp_Object Vselect_safe_coding_system_function;
-
-/* Mnemonic string for each format of end-of-line.  */
-Lisp_Object eol_mnemonic_unix, eol_mnemonic_dos, eol_mnemonic_mac;
-/* Mnemonic string to indicate format of end-of-line is not yet
-   decided.  */
-Lisp_Object eol_mnemonic_undecided;
-
 /* Format of end-of-line decided by system.  This is Qunix on
    Unix and Mac, Qdos on DOS/Windows.
    This has an effect only for external encoding (i.e. for output to
@@ -344,8 +333,6 @@ Lisp_Object eol_mnemonic_undecided;
 static Lisp_Object system_eol_type;
 
 #ifdef emacs
-
-Lisp_Object Vcoding_system_list, Vcoding_system_alist;
 
 Lisp_Object Qcoding_system_p, Qcoding_system_error;
 
@@ -356,63 +343,16 @@ Lisp_Object Qutf_8_emacs;
 
 /* Coding-systems are handed between Emacs Lisp programs and C internal
    routines by the following three variables.  */
-/* Coding-system for reading files and receiving data from process.  */
-Lisp_Object Vcoding_system_for_read;
-/* Coding-system for writing files and sending data to process.  */
-Lisp_Object Vcoding_system_for_write;
-/* Coding-system actually used in the latest I/O.  */
-Lisp_Object Vlast_coding_system_used;
-/* Set to non-nil when an error is detected while code conversion.  */
-Lisp_Object Vlast_code_conversion_error;
-/* A vector of length 256 which contains information about special
-   Latin codes (especially for dealing with Microsoft codes).  */
-Lisp_Object Vlatin_extra_code_table;
-
-/* Flag to inhibit code conversion of end-of-line format.  */
-int inhibit_eol_conversion;
-
-/* Flag to inhibit ISO2022 escape sequence detection.  */
-int inhibit_iso_escape_detection;
-
-/* Flag to inhibit detection of binary files through null bytes.  */
-int inhibit_null_byte_detection;
-
-/* Flag to make buffer-file-coding-system inherit from process-coding.  */
-int inherit_process_coding_system;
-
 /* Coding system to be used to encode text for terminal display when
    terminal coding system is nil.  */
 struct coding_system safe_terminal_coding;
 
-Lisp_Object Vfile_coding_system_alist;
-Lisp_Object Vprocess_coding_system_alist;
-Lisp_Object Vnetwork_coding_system_alist;
-
-Lisp_Object Vlocale_coding_system;
-
 #endif /* emacs */
-
-/* Flag to tell if we look up translation table on character code
-   conversion.  */
-Lisp_Object Venable_character_translation;
-/* Standard translation table to look up on decoding (reading).  */
-Lisp_Object Vstandard_translation_table_for_decode;
-/* Standard translation table to look up on encoding (writing).  */
-Lisp_Object Vstandard_translation_table_for_encode;
 
 Lisp_Object Qtranslation_table;
 Lisp_Object Qtranslation_table_id;
 Lisp_Object Qtranslation_table_for_decode;
 Lisp_Object Qtranslation_table_for_encode;
-
-/* Alist of charsets vs revision number.  */
-static Lisp_Object Vcharset_revision_table;
-
-/* Default coding systems used for process I/O.  */
-Lisp_Object Vdefault_process_coding_system;
-
-/* Char table for translating Quail and self-inserting input.  */
-Lisp_Object Vtranslation_table_for_input;
 
 /* Two special coding systems.  */
 Lisp_Object Vsjis_coding_system;
@@ -530,7 +470,7 @@ enum iso_code_class_type
    on output.  */
 #define CODING_ISO_FLAG_DESIGNATE_AT_BOL 0x0400
 
-/* If set, do not encode unsafe charactes on output.  */
+/* If set, do not encode unsafe characters on output.  */
 #define CODING_ISO_FLAG_SAFE		0x0800
 
 /* If set, extra latin codes (128..159) are accepted as a valid code
@@ -681,12 +621,8 @@ enum coding_category
    | CATEGORY_MASK_UTF_8_NOSIG	\
    | CATEGORY_MASK_UTF_8_SIG)
 
-/* List of symbols `coding-category-xxx' ordered by priority.  This
-   variable is exposed to Emacs Lisp.  */
-static Lisp_Object Vcoding_category_list;
-
 /* Table of coding categories (Lisp symbols).  This variable is for
-   internal use oly.  */
+   internal use only.  */
 static Lisp_Object Vcoding_category_table;
 
 /* Table of coding-categories ordered by priority.  */
@@ -818,7 +754,7 @@ static struct coding_system coding_categories[coding_category_max];
   } while (0)
 
 
-/* Like EMIT_ONE_ASCII_BYTE byt store two bytes; C1 and C2.  */
+/* Like EMIT_ONE_ASCII_BYTE but store two bytes; C1 and C2.  */
 
 #define EMIT_TWO_ASCII_BYTES(c1, c2)	\
   do {					\
@@ -1227,7 +1163,7 @@ alloc_destination (struct coding_system *coding, EMACS_INT nbytes,
 
    METHOD is one of enum composition_method.
 
-   Optionnal COMPOSITION-COMPONENTS are characters and composition
+   Optional COMPOSITION-COMPONENTS are characters and composition
    rules.
 
    In the case of CODING_ANNOTATE_CHARSET_MASK, one element CHARSET-ID
@@ -1607,10 +1543,9 @@ static int
 detect_coding_utf_16 (struct coding_system *coding,
 		      struct coding_detection_info *detect_info)
 {
-  const unsigned char *src = coding->source, *src_base = src;
+  const unsigned char *src = coding->source;
   const unsigned char *src_end = coding->source + coding->src_bytes;
   int multibytep = coding->src_multibyte;
-  int consumed_chars = 0;
   int c1, c2;
 
   detect_info->checked |= CATEGORY_MASK_UTF_16;
@@ -1932,7 +1867,7 @@ encode_coding_utf_16 (struct coding_system *coding)
 	CHARS is 0xA0 plus a number of characters composed by this
 	data,
 
-	COMPONENTs are characters of multibye form or composition
+	COMPONENTs are characters of multibyte form or composition
 	rules encoded by two-byte of ASCII codes.
 
    In addition, for backward compatibility, the following formats are
@@ -2008,7 +1943,7 @@ detect_coding_emacs_mule (struct coding_system *coding,
 	}
       else
 	{
-	  int more_bytes = emacs_mule_bytes[*src_base] - 1;
+	  int more_bytes = emacs_mule_bytes[c] - 1;
 
 	  while (more_bytes > 0)
 	    {
@@ -2053,7 +1988,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
   const unsigned char *src_end = coding->source + coding->src_bytes;
   const unsigned char *src_base = src;
   int multibytep = coding->src_multibyte;
-  struct charset *charset;
+  int charset_id;
   unsigned code;
   int c;
   int consumed_chars = 0;
@@ -2063,7 +1998,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
   if (c < 0)
     {
       c = -c;
-      charset = emacs_mule_charset[0];
+      charset_id = emacs_mule_charset[0];
     }
   else
     {
@@ -2099,7 +2034,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
       switch (emacs_mule_bytes[c])
 	{
 	case 2:
-	  if (! (charset = emacs_mule_charset[c]))
+	  if ((charset_id = emacs_mule_charset[c]) < 0)
 	    goto invalid_code;
 	  ONE_MORE_BYTE (c);
 	  if (c < 0xA0)
@@ -2112,7 +2047,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
 	      || c == EMACS_MULE_LEADING_CODE_PRIVATE_12)
 	    {
 	      ONE_MORE_BYTE (c);
-	      if (c < 0xA0 || ! (charset = emacs_mule_charset[c]))
+	      if (c < 0xA0 || (charset_id = emacs_mule_charset[c]) < 0)
 		goto invalid_code;
 	      ONE_MORE_BYTE (c);
 	      if (c < 0xA0)
@@ -2121,7 +2056,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
 	    }
 	  else
 	    {
-	      if (! (charset = emacs_mule_charset[c]))
+	      if ((charset_id = emacs_mule_charset[c]) < 0)
 		goto invalid_code;
 	      ONE_MORE_BYTE (c);
 	      if (c < 0xA0)
@@ -2136,7 +2071,7 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
 
 	case 4:
 	  ONE_MORE_BYTE (c);
-	  if (c < 0 || ! (charset = emacs_mule_charset[c]))
+	  if (c < 0 || (charset_id = emacs_mule_charset[c]) < 0)
 	    goto invalid_code;
 	  ONE_MORE_BYTE (c);
 	  if (c < 0xA0)
@@ -2150,21 +2085,21 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
 
 	case 1:
 	  code = c;
-	  charset = CHARSET_FROM_ID (ASCII_BYTE_P (code)
-				     ? charset_ascii : charset_eight_bit);
+	  charset_id = ASCII_BYTE_P (code) ? charset_ascii : charset_eight_bit;
 	  break;
 
 	default:
 	  abort ();
 	}
-      CODING_DECODE_CHAR (coding, src, src_base, src_end, charset, code, c);
+      CODING_DECODE_CHAR (coding, src, src_base, src_end,
+			  CHARSET_FROM_ID (charset_id), code, c);
       if (c < 0)
 	goto invalid_code;
     }
   *nbytes = src - src_base;
   *nchars = consumed_chars;
   if (id)
-    *id = charset->id;
+    *id = charset_id;
   return (mseq_found ? -c : c);
 
  no_more_source:
@@ -2277,7 +2212,6 @@ emacs_mule_char (struct coding_system *coding, const unsigned char *src,
 #define DECODE_EMACS_MULE_21_COMPOSITION()				\
   do {									\
     enum composition_method method = c - 0xF2;				\
-    int *charbuf_base = charbuf;					\
     int nbytes, nchars;							\
     									\
     ONE_MORE_BYTE (c);							\
@@ -2428,8 +2362,8 @@ decode_coding_emacs_mule (struct coding_system *coding)
   const unsigned char *src_end = coding->source + coding->src_bytes;
   const unsigned char *src_base;
   int *charbuf = coding->charbuf + coding->charbuf_used;
-  /* We may produce two annocations (charset and composition) in one
-     loop and one more charset annocation at the end.  */
+  /* We may produce two annotations (charset and composition) in one
+     loop and one more charset annotation at the end.  */
   int *charbuf_end
     = coding->charbuf + coding->charbuf_size - (MAX_ANNOTATION_LENGTH * 3);
   int consumed_chars = 0, consumed_chars_base;
@@ -2505,7 +2439,7 @@ decode_coding_emacs_mule (struct coding_system *coding)
 	  /* emacs_mule_char can load a charset map from a file, which
 	     allocates a large structure and might cause buffer text
 	     to be relocated as result.  Thus, we need to remember the
-	     original pointer to buffer text, and fixup all related
+	     original pointer to buffer text, and fix up all related
 	     pointers after the call.  */
 	  const unsigned char *orig = coding->source;
 	  EMACS_INT offset;
@@ -2532,7 +2466,7 @@ decode_coding_emacs_mule (struct coding_system *coding)
 	    cmp_status->ncomps -= nchars;
 	}
 
-      /* Now if C >= 0, we found a normally encoded characer, if C <
+      /* Now if C >= 0, we found a normally encoded character, if C <
 	 0, we found an old-style composition component character or
 	 rule.  */
 
@@ -2631,11 +2565,6 @@ decode_coding_emacs_mule (struct coding_system *coding)
 	  else
 	    EMACS_MULE_MAYBE_FINISH_COMPOSITION ();
 	}
-      continue;
-
-    retry:
-      src = src_base;
-      consumed_chars = consumed_chars_base;
       continue;
 
     invalid_code:
@@ -3043,7 +2972,7 @@ setup_iso_safe_charsets (Lisp_Object attrs)
 
 
 /* See the above "GENERAL NOTES on `detect_coding_XXX ()' functions".
-   Check if a text is encoded in one of ISO-2022 based codig systems.
+   Check if a text is encoded in one of ISO-2022 based coding systems.
    If it is, return 1, else return 0.  */
 
 static int
@@ -3452,7 +3381,7 @@ finish_composition (int *charbuf, struct composition_status *cmp_status)
   return new_chars;
 }
 
-/* If characers are under composition, finish the composition.  */
+/* If characters are under composition, finish the composition.  */
 #define MAYBE_FINISH_COMPOSITION()				\
   do {								\
     if (cmp_status->state != COMPOSING_NO)			\
@@ -3558,8 +3487,8 @@ decode_coding_iso_2022 (struct coding_system *coding)
   const unsigned char *src_end = coding->source + coding->src_bytes;
   const unsigned char *src_base;
   int *charbuf = coding->charbuf + coding->charbuf_used;
-  /* We may produce two annocations (charset and composition) in one
-     loop and one more charset annocation at the end.  */
+  /* We may produce two annotations (charset and composition) in one
+     loop and one more charset annotation at the end.  */
   int *charbuf_end
     = coding->charbuf + coding->charbuf_size - (MAX_ANNOTATION_LENGTH * 3);
   int consumed_chars = 0, consumed_chars_base;
@@ -3861,7 +3790,7 @@ decode_coding_iso_2022 (struct coding_system *coding)
 		goto invalid_code;
 	      /* For the moment, nested direction is not supported.
 		 So, `coding->mode & CODING_MODE_DIRECTION' zero means
-		 left-to-right, and nozero means right-to-left.  */
+		 left-to-right, and nonzero means right-to-left.  */
 	      ONE_MORE_BYTE (c1);
 	      switch (c1)
 		{
@@ -4490,7 +4419,10 @@ encode_coding_iso_2022 (struct coding_system *coding)
   charset_list = CODING_ATTR_CHARSET_LIST (attrs);
   coding->safe_charsets = SDATA (CODING_ATTR_SAFE_CHARSETS (attrs));
 
-  ascii_compatible = ! NILP (CODING_ATTR_ASCII_COMPAT (attrs));
+  ascii_compatible
+    = (! NILP (CODING_ATTR_ASCII_COMPAT (attrs))
+       && ! (CODING_ISO_FLAGS (coding) & (CODING_ISO_FLAG_DESIGNATION
+					  | CODING_ISO_FLAG_LOCKING_SHIFT)));
 
   while (charbuf < charbuf_end)
     {
@@ -4763,7 +4695,7 @@ decode_coding_sjis (struct coding_system *coding)
   const unsigned char *src_end = coding->source + coding->src_bytes;
   const unsigned char *src_base;
   int *charbuf = coding->charbuf + coding->charbuf_used;
-  /* We may produce one charset annocation in one loop and one more at
+  /* We may produce one charset annotation in one loop and one more at
      the end.  */
   int *charbuf_end
     = coding->charbuf + coding->charbuf_size - (MAX_ANNOTATION_LENGTH * 2);
@@ -4881,7 +4813,7 @@ decode_coding_big5 (struct coding_system *coding)
   const unsigned char *src_end = coding->source + coding->src_bytes;
   const unsigned char *src_base;
   int *charbuf = coding->charbuf + coding->charbuf_used;
-  /* We may produce one charset annocation in one loop and one more at
+  /* We may produce one charset annotation in one loop and one more at
      the end.  */
   int *charbuf_end
     = coding->charbuf + coding->charbuf_size - (MAX_ANNOTATION_LENGTH * 2);
@@ -5447,9 +5379,9 @@ detect_coding_charset (struct coding_system *coding,
   attrs = CODING_ID_ATTRS (coding->id);
   valids = AREF (attrs, coding_attr_charset_valids);
   name = CODING_ID_NAME (coding->id);
-  if (strncmp ((char *) SDATA (SYMBOL_NAME (name)),
+  if (strncmp (SSDATA (SYMBOL_NAME (name)),
 	       "iso-8859-", sizeof ("iso-8859-") - 1) == 0
-      || strncmp ((char *) SDATA (SYMBOL_NAME (name)),
+      || strncmp (SSDATA (SYMBOL_NAME (name)),
 		  "iso-latin-", sizeof ("iso-latin-") - 1) == 0)
     check_latin_extra = 1;
 
@@ -5538,7 +5470,7 @@ decode_coding_charset (struct coding_system *coding)
   const unsigned char *src_end = coding->source + coding->src_bytes;
   const unsigned char *src_base;
   int *charbuf = coding->charbuf + coding->charbuf_used;
-  /* We may produce one charset annocation in one loop and one more at
+  /* We may produce one charset annotation in one loop and one more at
      the end.  */
   int *charbuf_end
     = coding->charbuf + coding->charbuf_size - (MAX_ANNOTATION_LENGTH * 2);
@@ -6013,10 +5945,9 @@ raw_text_coding_system (Lisp_Object coding_system)
 }
 
 
-/* If CODING_SYSTEM doesn't specify end-of-line format but PARENT
-   does, return one of the subsidiary that has the same eol-spec as
-   PARENT.  Otherwise, return CODING_SYSTEM.  If PARENT is nil,
-   inherit end-of-line format from the system's setting
+/* If CODING_SYSTEM doesn't specify end-of-line format, return one of
+   the subsidiary that has the same eol-spec as PARENT (if it is not
+   nil and specifies end-of-line format) or the system's setting
    (system_eol_type).  */
 
 Lisp_Object
@@ -6038,6 +5969,8 @@ coding_inherit_eol_type (Lisp_Object coding_system, Lisp_Object parent)
 
 	  parent_spec = CODING_SYSTEM_SPEC (parent);
 	  parent_eol_type = AREF (parent_spec, 2);
+	  if (VECTORP (parent_eol_type))
+	    parent_eol_type = system_eol_type;
 	}
       else
 	parent_eol_type = system_eol_type;
@@ -6050,6 +5983,45 @@ coding_inherit_eol_type (Lisp_Object coding_system, Lisp_Object parent)
     }
   return coding_system;
 }
+
+
+/* Check if text-conversion and eol-conversion of CODING_SYSTEM are
+   decided for writing to a process.  If not, complement them, and
+   return a new coding system.  */
+
+Lisp_Object
+complement_process_encoding_system (Lisp_Object coding_system)
+{
+  Lisp_Object coding_base = Qnil, eol_base = Qnil;
+  Lisp_Object spec, attrs;
+  int i;
+
+  for (i = 0; i < 3; i++)
+    {
+      if (i == 1)
+	coding_system = CDR_SAFE (Vdefault_process_coding_system);
+      else if (i == 2)
+	coding_system = preferred_coding_system ();
+      spec = CODING_SYSTEM_SPEC (coding_system);
+      if (NILP (spec))
+	continue;
+      attrs = AREF (spec, 0);
+      if (NILP (coding_base) && ! EQ (CODING_ATTR_TYPE (attrs), Qundecided))
+	coding_base = CODING_ATTR_BASE_NAME (attrs);
+      if (NILP (eol_base) && ! VECTORP (AREF (spec, 2)))
+	eol_base = coding_system;
+      if (! NILP (coding_base) && ! NILP (eol_base))
+	break;
+    }
+
+  if (i > 0)
+    /* The original CODING_SYSTEM didn't specify text-conversion or
+       eol-conversion.  Be sure that we return a fully complemented
+       coding system.  */
+    coding_system = coding_inherit_eol_type (coding_base, eol_base);
+  return coding_system;
+}
+
 
 /* Emacs has a mechanism to automatically detect a coding system if it
    is one of Emacs' internal format, ISO2022, SJIS, and BIG5.  But,
@@ -6101,14 +6073,14 @@ coding_inherit_eol_type (Lisp_Object coding_system, Lisp_Object parent)
    o coding-category-iso-7-else
 
    	The category for a coding system which has the same code range
-	as ISO2022 of 7-bit environemnt but uses locking shift or
+	as ISO2022 of 7-bit environment but uses locking shift or
 	single shift functions.  Assigned the coding-system (Lisp
 	symbol) `iso-2022-7bit-lock' by default.
 
    o coding-category-iso-8-else
 
    	The category for a coding system which has the same code range
-	as ISO2022 of 8-bit environemnt but uses locking shift or
+	as ISO2022 of 8-bit environment but uses locking shift or
 	single shift functions.  Assigned the coding-system (Lisp
 	symbol) `iso-2022-8bit-ss2' by default.
 
@@ -6217,8 +6189,9 @@ detect_eol (const unsigned char *source, EMACS_INT src_bytes,
 		{
 		  /* The found type is different from what found before.
 		     Allow for stray ^M characters in DOS EOL files.  */
-		  if (eol_seen == EOL_SEEN_CR && this_eol == EOL_SEEN_CRLF
-		      || eol_seen == EOL_SEEN_CRLF && this_eol == EOL_SEEN_CR)
+		  if ((eol_seen == EOL_SEEN_CR && this_eol == EOL_SEEN_CRLF)
+		      || (eol_seen == EOL_SEEN_CRLF
+			  && this_eol == EOL_SEEN_CR))
 		    eol_seen = EOL_SEEN_CRLF;
 		  else
 		    {
@@ -6233,42 +6206,40 @@ detect_eol (const unsigned char *source, EMACS_INT src_bytes,
 	}
     }
   else
-    {
-      while (src < src_end)
-	{
-	  c = *src++;
-	  if (c == '\n' || c == '\r')
-	    {
-	      int this_eol;
+    while (src < src_end)
+      {
+	c = *src++;
+	if (c == '\n' || c == '\r')
+	  {
+	    int this_eol;
 
-	      if (c == '\n')
-		this_eol = EOL_SEEN_LF;
-	      else if (src >= src_end || *src != '\n')
-		this_eol = EOL_SEEN_CR;
-	      else
-		this_eol = EOL_SEEN_CRLF, src++;
+	    if (c == '\n')
+	      this_eol = EOL_SEEN_LF;
+	    else if (src >= src_end || *src != '\n')
+	      this_eol = EOL_SEEN_CR;
+	    else
+	      this_eol = EOL_SEEN_CRLF, src++;
 
-	      if (eol_seen == EOL_SEEN_NONE)
-		/* This is the first end-of-line.  */
-		eol_seen = this_eol;
-	      else if (eol_seen != this_eol)
-		{
-		  /* The found type is different from what found before.
-		     Allow for stray ^M characters in DOS EOL files.  */
-		  if (eol_seen == EOL_SEEN_CR && this_eol == EOL_SEEN_CRLF
-		      || eol_seen == EOL_SEEN_CRLF && this_eol == EOL_SEEN_CR)
-		    eol_seen = EOL_SEEN_CRLF;
-		  else
-		    {
-		      eol_seen = EOL_SEEN_LF;
-		      break;
-		    }
-		}
-	      if (++total == MAX_EOL_CHECK_COUNT)
-		break;
-	    }
-	}
-    }
+	    if (eol_seen == EOL_SEEN_NONE)
+	      /* This is the first end-of-line.  */
+	      eol_seen = this_eol;
+	    else if (eol_seen != this_eol)
+	      {
+		/* The found type is different from what found before.
+		   Allow for stray ^M characters in DOS EOL files.  */
+		if ((eol_seen == EOL_SEEN_CR && this_eol == EOL_SEEN_CRLF)
+		    || (eol_seen == EOL_SEEN_CRLF && this_eol == EOL_SEEN_CR))
+		  eol_seen = EOL_SEEN_CRLF;
+		else
+		  {
+		    eol_seen = EOL_SEEN_LF;
+		    break;
+		  }
+	      }
+	    if (++total == MAX_EOL_CHECK_COUNT)
+	      break;
+	  }
+      }
   return eol_seen;
 }
 
@@ -7505,7 +7476,7 @@ static Lisp_Object Vcode_conversion_reused_workbuf;
 static int reused_workbuf_in_use;
 
 
-/* Return a working buffer of code convesion.  MULTIBYTE specifies the
+/* Return a working buffer of code conversion.  MULTIBYTE specifies the
    multibyteness of returning buffer.  */
 
 static Lisp_Object
@@ -8157,7 +8128,7 @@ function `define-coding-system'.  */)
 
 /* Detect how the bytes at SRC of length SRC_BYTES are encoded.  If
    HIGHEST is nonzero, return the coding system of the highest
-   priority among the detected coding systems.  Otherwize return a
+   priority among the detected coding systems.  Otherwise return a
    list of detected coding systems sorted by their priorities.  If
    MULTIBYTEP is nonzero, it is assumed that the bytes are in correct
    multibyte form but contains only ASCII and eight-bit chars.
@@ -9254,15 +9225,20 @@ DEFUN ("set-terminal-coding-system-internal", Fset_terminal_coding_system_intern
        doc: /* Internal use only.  */)
   (Lisp_Object coding_system, Lisp_Object terminal)
 {
-  struct coding_system *terminal_coding = TERMINAL_TERMINAL_CODING (get_terminal (terminal, 1));
+  struct terminal *term = get_terminal (terminal, 1);
+  struct coding_system *terminal_coding = TERMINAL_TERMINAL_CODING (term);
   CHECK_SYMBOL (coding_system);
   setup_coding_system (Fcheck_coding_system (coding_system), terminal_coding);
   /* We had better not send unsafe characters to terminal.  */
   terminal_coding->mode |= CODING_MODE_SAFE_ENCODING;
-  /* Characer composition should be disabled.  */
+  /* Character composition should be disabled.  */
   terminal_coding->common_flags &= ~CODING_ANNOTATE_COMPOSITION_MASK;
   terminal_coding->src_multibyte = 1;
   terminal_coding->dst_multibyte = 0;
+  if (terminal_coding->common_flags & CODING_REQUIRE_ENCODING_MASK)
+    term->charset_list = coding_charset_list (terminal_coding);
+  else
+    term->charset_list = Fcons (make_number (charset_ascii), Qnil);
   return Qnil;
 }
 
@@ -9275,7 +9251,7 @@ DEFUN ("set-safe-terminal-coding-system-internal",
   CHECK_SYMBOL (coding_system);
   setup_coding_system (Fcheck_coding_system (coding_system),
 		       &safe_terminal_coding);
-  /* Characer composition should be disabled.  */
+  /* Character composition should be disabled.  */
   safe_terminal_coding.common_flags &= ~CODING_ANNOTATE_COMPOSITION_MASK;
   safe_terminal_coding.src_multibyte = 1;
   safe_terminal_coding.dst_multibyte = 0;
@@ -9309,7 +9285,7 @@ DEFUN ("set-keyboard-coding-system-internal", Fset_keyboard_coding_system_intern
   else
     Fcheck_coding_system (coding_system);
   setup_coding_system (coding_system, TERMINAL_KEYBOARD_CODING (t));
-  /* Characer composition should be disabled.  */
+  /* Character composition should be disabled.  */
   TERMINAL_KEYBOARD_CODING (t)->common_flags
     &= ~CODING_ANNOTATE_COMPOSITION_MASK;
   return Qnil;
@@ -9677,7 +9653,7 @@ usage: (define-coding-system-internal ...)  */)
 
 	 If Nth element is a list of charset IDs, N is the first byte
 	 of one of them.  The list is sorted by dimensions of the
-	 charsets.  A charset of smaller dimension comes firtst. */
+	 charsets.  A charset of smaller dimension comes first. */
       val = Fmake_vector (make_number (256), Qnil);
 
       for (tail = charset_list; CONSP (tail); tail = XCDR (tail))
@@ -10485,7 +10461,7 @@ syms_of_coding (void)
   defsubr (&Scoding_system_eol_type);
   defsubr (&Scoding_system_priority_list);
 
-  DEFVAR_LISP ("coding-system-list", &Vcoding_system_list,
+  DEFVAR_LISP ("coding-system-list", Vcoding_system_list,
 	       doc: /* List of coding systems.
 
 Do not alter the value of this variable manually.  This variable should be
@@ -10493,7 +10469,7 @@ updated by the functions `define-coding-system' and
 `define-coding-system-alias'.  */);
   Vcoding_system_list = Qnil;
 
-  DEFVAR_LISP ("coding-system-alist", &Vcoding_system_alist,
+  DEFVAR_LISP ("coding-system-alist", Vcoding_system_alist,
 	       doc: /* Alist of coding system names.
 Each element is one element list of coding system name.
 This variable is given to `completing-read' as COLLECTION argument.
@@ -10503,7 +10479,7 @@ updated by the functions `make-coding-system' and
 `define-coding-system-alias'.  */);
   Vcoding_system_alist = Qnil;
 
-  DEFVAR_LISP ("coding-category-list", &Vcoding_category_list,
+  DEFVAR_LISP ("coding-category-list", Vcoding_category_list,
 	       doc: /* List of coding-categories (symbols) ordered by priority.
 
 On detecting a coding system, Emacs tries code detection algorithms
@@ -10511,7 +10487,7 @@ associated with each coding-category one by one in this order.  When
 one algorithm agrees with a byte sequence of source text, the coding
 system bound to the corresponding coding-category is selected.
 
-Don't modify this variable directly, but use `set-coding-priority'.  */);
+Don't modify this variable directly, but use `set-coding-system-priority'.  */);
   {
     int i;
 
@@ -10522,7 +10498,7 @@ Don't modify this variable directly, but use `set-coding-priority'.  */);
 		 Vcoding_category_list);
   }
 
-  DEFVAR_LISP ("coding-system-for-read", &Vcoding_system_for_read,
+  DEFVAR_LISP ("coding-system-for-read", Vcoding_system_for_read,
 	       doc: /* Specify the coding system for read operations.
 It is useful to bind this variable with `let', but do not set it globally.
 If the value is a coding system, it is used for decoding on read operation.
@@ -10531,7 +10507,7 @@ There are three such tables: `file-coding-system-alist',
 `process-coding-system-alist', and `network-coding-system-alist'.  */);
   Vcoding_system_for_read = Qnil;
 
-  DEFVAR_LISP ("coding-system-for-write", &Vcoding_system_for_write,
+  DEFVAR_LISP ("coding-system-for-write", Vcoding_system_for_write,
 	       doc: /* Specify the coding system for write operations.
 Programs bind this variable with `let', but you should not set it globally.
 If the value is a coding system, it is used for encoding of output,
@@ -10545,12 +10521,12 @@ For output to files, if the above procedure does not specify a coding system,
 the value of `buffer-file-coding-system' is used.  */);
   Vcoding_system_for_write = Qnil;
 
-  DEFVAR_LISP ("last-coding-system-used", &Vlast_coding_system_used,
+  DEFVAR_LISP ("last-coding-system-used", Vlast_coding_system_used,
 	       doc: /*
 Coding system used in the latest file or process I/O.  */);
   Vlast_coding_system_used = Qnil;
 
-  DEFVAR_LISP ("last-code-conversion-error", &Vlast_code_conversion_error,
+  DEFVAR_LISP ("last-code-conversion-error", Vlast_code_conversion_error,
 	       doc: /*
 Error status of the last code conversion.
 
@@ -10567,21 +10543,21 @@ explicitly set this variable to nil before performing code
 conversion.  */);
   Vlast_code_conversion_error = Qnil;
 
-  DEFVAR_BOOL ("inhibit-eol-conversion", &inhibit_eol_conversion,
+  DEFVAR_BOOL ("inhibit-eol-conversion", inhibit_eol_conversion,
 	       doc: /*
 *Non-nil means always inhibit code conversion of end-of-line format.
 See info node `Coding Systems' and info node `Text and Binary' concerning
 such conversion.  */);
   inhibit_eol_conversion = 0;
 
-  DEFVAR_BOOL ("inherit-process-coding-system", &inherit_process_coding_system,
+  DEFVAR_BOOL ("inherit-process-coding-system", inherit_process_coding_system,
 	       doc: /*
 Non-nil means process buffer inherits coding system of process output.
 Bind it to t if the process output is to be treated as if it were a file
 read from some filesystem.  */);
   inherit_process_coding_system = 0;
 
-  DEFVAR_LISP ("file-coding-system-alist", &Vfile_coding_system_alist,
+  DEFVAR_LISP ("file-coding-system-alist", Vfile_coding_system_alist,
 	       doc: /*
 Alist to decide a coding system to use for a file I/O operation.
 The format is ((PATTERN . VAL) ...),
@@ -10602,7 +10578,7 @@ See also the function `find-operation-coding-system'
 and the variable `auto-coding-alist'.  */);
   Vfile_coding_system_alist = Qnil;
 
-  DEFVAR_LISP ("process-coding-system-alist", &Vprocess_coding_system_alist,
+  DEFVAR_LISP ("process-coding-system-alist", Vprocess_coding_system_alist,
 	       doc: /*
 Alist to decide a coding system to use for a process I/O operation.
 The format is ((PATTERN . VAL) ...),
@@ -10618,7 +10594,7 @@ or a cons of coding systems which are used as above.
 See also the function `find-operation-coding-system'.  */);
   Vprocess_coding_system_alist = Qnil;
 
-  DEFVAR_LISP ("network-coding-system-alist", &Vnetwork_coding_system_alist,
+  DEFVAR_LISP ("network-coding-system-alist", Vnetwork_coding_system_alist,
 	       doc: /*
 Alist to decide a coding system to use for a network I/O operation.
 The format is ((PATTERN . VAL) ...),
@@ -10635,48 +10611,48 @@ or a cons of coding systems which are used as above.
 See also the function `find-operation-coding-system'.  */);
   Vnetwork_coding_system_alist = Qnil;
 
-  DEFVAR_LISP ("locale-coding-system", &Vlocale_coding_system,
+  DEFVAR_LISP ("locale-coding-system", Vlocale_coding_system,
 	       doc: /* Coding system to use with system messages.
 Also used for decoding keyboard input on X Window system.  */);
   Vlocale_coding_system = Qnil;
 
   /* The eol mnemonics are reset in startup.el system-dependently.  */
-  DEFVAR_LISP ("eol-mnemonic-unix", &eol_mnemonic_unix,
+  DEFVAR_LISP ("eol-mnemonic-unix", eol_mnemonic_unix,
 	       doc: /*
 *String displayed in mode line for UNIX-like (LF) end-of-line format.  */);
   eol_mnemonic_unix = make_pure_c_string (":");
 
-  DEFVAR_LISP ("eol-mnemonic-dos", &eol_mnemonic_dos,
+  DEFVAR_LISP ("eol-mnemonic-dos", eol_mnemonic_dos,
 	       doc: /*
 *String displayed in mode line for DOS-like (CRLF) end-of-line format.  */);
   eol_mnemonic_dos = make_pure_c_string ("\\");
 
-  DEFVAR_LISP ("eol-mnemonic-mac", &eol_mnemonic_mac,
+  DEFVAR_LISP ("eol-mnemonic-mac", eol_mnemonic_mac,
 	       doc: /*
 *String displayed in mode line for MAC-like (CR) end-of-line format.  */);
   eol_mnemonic_mac = make_pure_c_string ("/");
 
-  DEFVAR_LISP ("eol-mnemonic-undecided", &eol_mnemonic_undecided,
+  DEFVAR_LISP ("eol-mnemonic-undecided", eol_mnemonic_undecided,
 	       doc: /*
 *String displayed in mode line when end-of-line format is not yet determined.  */);
   eol_mnemonic_undecided = make_pure_c_string (":");
 
-  DEFVAR_LISP ("enable-character-translation", &Venable_character_translation,
+  DEFVAR_LISP ("enable-character-translation", Venable_character_translation,
 	       doc: /*
 *Non-nil enables character translation while encoding and decoding.  */);
   Venable_character_translation = Qt;
 
   DEFVAR_LISP ("standard-translation-table-for-decode",
-	       &Vstandard_translation_table_for_decode,
+	       Vstandard_translation_table_for_decode,
 	       doc: /* Table for translating characters while decoding.  */);
   Vstandard_translation_table_for_decode = Qnil;
 
   DEFVAR_LISP ("standard-translation-table-for-encode",
-	       &Vstandard_translation_table_for_encode,
+	       Vstandard_translation_table_for_encode,
 	       doc: /* Table for translating characters while encoding.  */);
   Vstandard_translation_table_for_encode = Qnil;
 
-  DEFVAR_LISP ("charset-revision-table", &Vcharset_revision_table,
+  DEFVAR_LISP ("charset-revision-table", Vcharset_revision_table,
 	       doc: /* Alist of charsets vs revision numbers.
 While encoding, if a charset (car part of an element) is found,
 designate it with the escape sequence identifying revision (cdr part
@@ -10684,13 +10660,13 @@ of the element).  */);
   Vcharset_revision_table = Qnil;
 
   DEFVAR_LISP ("default-process-coding-system",
-	       &Vdefault_process_coding_system,
+	       Vdefault_process_coding_system,
 	       doc: /* Cons of coding systems used for process I/O by default.
 The car part is used for decoding a process output,
 the cdr part is used for encoding a text to be sent to a process.  */);
   Vdefault_process_coding_system = Qnil;
 
-  DEFVAR_LISP ("latin-extra-code-table", &Vlatin_extra_code_table,
+  DEFVAR_LISP ("latin-extra-code-table", Vlatin_extra_code_table,
 	       doc: /*
 Table of extra Latin codes in the range 128..159 (inclusive).
 This is a vector of length 256.
@@ -10703,7 +10679,7 @@ Only 128th through 159th elements have a meaning.  */);
   Vlatin_extra_code_table = Fmake_vector (make_number (256), Qnil);
 
   DEFVAR_LISP ("select-safe-coding-system-function",
-	       &Vselect_safe_coding_system_function,
+	       Vselect_safe_coding_system_function,
 	       doc: /*
 Function to call to select safe coding system for encoding a text.
 
@@ -10717,7 +10693,7 @@ The default value is `select-safe-coding-system' (which see).  */);
   Vselect_safe_coding_system_function = Qnil;
 
   DEFVAR_BOOL ("coding-system-require-warning",
-	       &coding_system_require_warning,
+	       coding_system_require_warning,
 	       doc: /* Internal use only.
 If non-nil, on writing a file, `select-safe-coding-system-function' is
 called even if `coding-system-for-write' is non-nil.  The command
@@ -10726,7 +10702,7 @@ called even if `coding-system-for-write' is non-nil.  The command
 
 
   DEFVAR_BOOL ("inhibit-iso-escape-detection",
-	       &inhibit_iso_escape_detection,
+	       inhibit_iso_escape_detection,
 	       doc: /*
 If non-nil, Emacs ignores ISO-2022 escape sequences during code detection.
 
@@ -10754,7 +10730,7 @@ escape sequence (e.g `latin-1') on reading by \\[universal-coding-system-argumen
   inhibit_iso_escape_detection = 0;
 
   DEFVAR_BOOL ("inhibit-null-byte-detection",
-	       &inhibit_null_byte_detection,
+	       inhibit_null_byte_detection,
 	       doc: /* If non-nil, Emacs ignores null bytes on code detection.
 By default, Emacs treats it as binary data, and does not attempt to
 decode it.  The effect is as if you specified `no-conversion' for
@@ -10766,7 +10742,7 @@ from GNU Find and GNU Grep.  Emacs will then ignore the null bytes and
 decode text as usual.  */);
   inhibit_null_byte_detection = 0;
 
-  DEFVAR_LISP ("translation-table-for-input", &Vtranslation_table_for_input,
+  DEFVAR_LISP ("translation-table-for-input", Vtranslation_table_for_input,
 	       doc: /* Char table for translating self-inserting characters.
 This is applied to the result of input methods, not their input.
 See also `keyboard-translate-table'.
@@ -10850,13 +10826,10 @@ emacs_strerror (int error_number)
       Lisp_Object dec = code_convert_string_norecord (build_string (str),
 						      Vlocale_coding_system,
 						      0);
-      str = (char *) SDATA (dec);
+      str = SSDATA (dec);
     }
 
   return str;
 }
 
 #endif /* emacs */
-
-/* arch-tag: 3a3a2b01-5ff6-4071-9afe-f5b808d9229d
-   (do not change this comment) */

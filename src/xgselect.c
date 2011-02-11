@@ -1,6 +1,6 @@
 /* Function for handling the GLib event loop.
-   Copyright (C) 2009, 2010
-     Free Software Foundation, Inc.
+
+Copyright (C) 2009-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -109,11 +109,17 @@ xg_select (int max_fds, SELECT_TYPE *rfds, SELECT_TYPE *wfds, SELECT_TYPE *efds,
               if (rfds && FD_ISSET (i, rfds)) ++retval;
               else ++our_fds;
             }
+          else if (rfds)
+            FD_CLR (i, rfds);
+
           if (have_wfds && FD_ISSET (i, &all_wfds))
             {
               if (wfds && FD_ISSET (i, wfds)) ++retval;
               else ++our_fds;
             }
+          else if (wfds)
+            FD_CLR (i, wfds);
+
           if (efds && FD_ISSET (i, efds))
             ++retval;
         }
@@ -151,5 +157,3 @@ xgselect_initialize (void)
 #endif /* defined (USE_GTK) || defined (HAVE_GCONF) */
 }
 
-/* arch-tag: c5873ee3-d1f6-44f9-9f3b-b14f70fd0e6a
-   (do not change this comment) */

@@ -1,8 +1,6 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001,
-@c   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990-1995, 1998-2011  Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../../info/display
 @node Display, System Interface, Processes, Top
@@ -3214,7 +3212,9 @@ width from the window's frame.
   The values of these variables take effect when you display the
 buffer in a window.  If you change them while the buffer is visible,
 you can call @code{set-window-buffer} to display it once again in the
-same window, to make the changes take effect.
+same window, to make the changes take effect.  A buffer that does not
+specify values for these variables will use the default values
+specified for the frame; see @ref{Layout Parameters}.
 
 @defun set-window-fringes window left &optional right outside-margins
 This function sets the fringe widths of window @var{window}.
@@ -3657,9 +3657,8 @@ display specifications and what they mean.
 * Replacing Specs::      Display specs that replace the text.
 * Specified Space::      Displaying one space with a specified width.
 * Pixel Specification::  Specifying space width or height in pixels.
-* Other Display Specs::  Displaying an image; magnifying text; moving it
-                          up or down on the page; adjusting the width
-                          of spaces within text.
+* Other Display Specs::     Displaying an image; adjusting the height,
+                              spacing, and other properties of text.
 * Display Margins::     Displaying text or images to the side of the main text.
 @end menu
 
@@ -3890,6 +3889,13 @@ position as that text.  It is equivalent to using just @var{string},
 but it is done as a special case of marginal display (@pxref{Display
 Margins}).
 
+@item (left-fringe @var{bitmap} @r{[}@var{face}@r{]})
+@itemx (right-fringe @var{bitmap} @r{[}@var{face}@r{]})
+This display specification on any character of a line of text causes
+the specified @var{bitmap} be displayed in the left or right fringes
+for that line.  The optional @var{face} specifies the colors to be
+used for the bitmap.  @xref{Fringe Bitmaps}, for the details.
+
 @item (space-width @var{factor})
 This display specification affects all the space characters within the
 text that has the specification.  It displays all of these spaces
@@ -4053,10 +4059,12 @@ displayed (@pxref{Display Feature Testing}).
 
   Emacs can display a number of different image formats; some of them
 are supported only if particular support libraries are installed on
-your machine.  In some environments, Emacs can load image
-libraries on demand; if so, the variable @code{image-library-alist}
-can be used to modify the set of known names for these dynamic
-libraries (though it is not possible to add new image formats).
+your machine.  In some environments, Emacs can load support libraries
+on demand; if so, the variable @code{dynamic-library-alist}
+(@pxref{Dynamic Libraries}) can be used to modify the set of known
+names for these dynamic libraries (though it is not possible to add
+new image formats).  Note that image types @code{pbm} and @code{xbm}
+do not depend on external libraries and are always available in Emacs.
 
   The supported image formats include XBM, XPM (this requires the
 libraries @code{libXpm} version 3.4k and @code{libz}), GIF (requiring
@@ -4078,24 +4086,6 @@ unavailable dynamic libraries, for example).
 
 To know which image types are really available, use
 @code{image-type-available-p}.
-@end defvar
-
-@defvar image-library-alist
-This in an alist of image types vs external libraries needed to
-display them.
-
-Each element is a list @code{(@var{image-type} @var{library}...)},
-where the car is a supported image format from @code{image-types}, and
-the rest are strings giving alternate filenames for the corresponding
-external libraries to load.
-
-Emacs tries to load the libraries in the order they appear on the
-list; if none is loaded, the running session of Emacs won't support
-the image type.  @code{pbm} and @code{xbm} don't need to be listed;
-they're always supported.
-
-This variable is ignored if the image libraries are statically linked
-into Emacs.
 @end defvar
 
 @defun image-type-available-p type
@@ -4466,47 +4456,56 @@ specifying the bounding box of the PostScript image, analogous to the
 
 @node ImageMagick Images
 @subsection ImageMagick Images
-The Imagemagick library can be used to load many image formats in Emacs.
+@cindex ImageMagick images
+@cindex images, support for more formats
 
-The function (imagemagick-types) returns a list of image file
-extensions that your installation of imagemagick supports.
+  If you build Emacs with ImageMagick (@url{http://www.imagemagick.org})
+support, you can use the ImageMagick library to load many image formats.
 
-The function (imagemagick-register-types) will enable the imagemagick
-support for the extensions in imagemagick-types minus the types listed
-in imagemagick-types-inhibit.
+@findex imagemagick-types
+The function @code{imagemagick-types} returns a list of image file
+extensions that your installation of ImageMagick supports.  To enable
+support, you must call the function @code{imagemagick-register-types}.
 
-imagemagick-types-inhibit has the value '(C HTML HTM TXT PDF) by
-default.  There can be overlap between image loaders in your Emacs
-installation. If you never want to use the ImageMagick loader to use
-Jpeg files, for instance, add 'JPG to imagemagick-types-inhibit. Which
-loader that will be used in practice depends on the priority of the
-loaders.
+@vindex imagemagick-types-inhibit
+The variable @code{imagemagick-types-inhibit} specifies a list of
+image types that you do @emph{not} want ImageMagick to handle.  There
+may be overlap between image loaders in your Emacs installation, and
+you may prefer to use a different one for a given image type (which
+@c FIXME how is this priority determined?
+loader will be used in practice depends on the priority of the loaders).
+@c FIXME why are these uppercase when image-types is lower-case?
+@c FIXME what are the possibe options?  Are these actually file extensions?
+For example, if you never want to use the ImageMagick loader to use
+JPEG files, add @code{JPG} to this list.
 
-imagemagick-render-type is a new variable which can be set to choose
-between screen render methods for the ImageMagick loader.
+@vindex imagemagick-render-type
+You can set the variable @code{imagemagick-render-type} to choose
+between screen render methods for the ImageMagick loader.  The options
+are: @code{0}, a conservative method which works with older
+@c FIXME details of this "newer method"?
+@c Presumably it is faster but may be less "robust"?
+ImageMagick versions (it is a bit slow, but robust); and @code{1},
+a newer ImageMagick method.
 
-- 0 is a conservative metod which works with older ImageMagick
-  versions. It is a bit slow, but robust.
+Images loaded with ImageMagick support a few new display specifications:
 
-- 1 utilizes a newer ImageMagick method   
+@table @code
+@item :width, :height
+The @code{:width} and @code{:height} keywords are used for scaling the
+image.  If only one of them is specified, the other one will be
+calculated so as to preserve the aspect ratio.  If both are specified,
+aspect ratio may not be preserved.
 
+@item :rotation
+Specifies a rotation angle in degrees.
 
-Images loaded with imagemagick will support a couple of new display
-specification behaviours:
-
-- if the :width and :height keywords are specified, these values are
-used for scaling the image. If only one of :width or :height is
-specified, the other one will be calculated so as to preserve the
-aspect ratio.If both :width and :height are specified, aspect ratio
-will not be preserved.
-
-- :rotation specifies a rotation angle in degrees.
-
-- :index specifies which image inside an image bundle file format, such
-as TIFF or DJVM, to view.
-
-The image-metadata function can be used to retrieve the total number
-of images in an image bundle. This is simmilar to how GIF files work.
+@item :index
+Specifies which image to view inside an image bundle file format, such
+as TIFF or DJVM.  You can use the @code{image-metadata} function to
+retrieve the total number of images in an image bundle (this is
+similar to how GIF files work).
+@end table
 
 
 @node Other Image Types
@@ -5010,8 +5009,9 @@ and returns it.
 button actually part of the text instead of being a property of the
 buffer.  Buttons using text properties do not create markers into the
 buffer, which is important for speed when you use extremely large
-numbers of buttons.  Both functions return the position of the start
-of the new button:
+numbers of buttons.  (However, if there is an existing face text
+property at the site of the button, the button face may not be visible.)
+Both functions return the position of the start of the new button:
 
 @defun make-text-button beg end &rest properties
 This makes a button from @var{beg} to @var{end} in the current buffer, using
@@ -5584,9 +5584,9 @@ digit characters representing the character code in octal.  (A display
 table can specify a glyph to use instead of @samp{\}.)
 
 @item
-Multibyte character codes above 256 are displayed as themselves, or as a
-question mark or empty box if the terminal cannot display that
-character.
+Multibyte character codes above 256 are displayed as themselves, or as
+a question mark or a hex code or an empty box if the terminal cannot
+display that character.
 @end itemize
 
   The usual display conventions apply even when there is a display
@@ -5933,6 +5933,14 @@ selected frame).  The list of possible symbols it returns is the same
 one documented for the variable @code{window-system} above.
 @end defun
 
+  Do @emph{not} use @code{window-system} and
+@code{initial-window-system} as predicates or boolean flag variables,
+if you want to write code that works differently on text terminals and
+graphic displays.  That is because @code{window-system} is not a good
+indicator of Emacs capabilities on a given display type.  Instead, use
+@code{display-graphic-p} or any of the other @code{display-*-p}
+predicates described in @ref{Display Feature Testing}.
+
 @defvar window-setup-hook
 This variable is a normal hook which Emacs runs after handling the
 initialization files.  Emacs runs this hook after it has completed
@@ -5944,7 +5952,3 @@ This hook is used for internal purposes: setting up communication with
 the window system, and creating the initial window.  Users should not
 interfere with it.
 @end defvar
-
-@ignore
-   arch-tag: ffdf5714-7ecf-415b-9023-fbc6b409c2c6
-@end ignore

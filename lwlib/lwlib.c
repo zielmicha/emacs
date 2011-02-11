@@ -1,7 +1,6 @@
 /* A general interface to the widgets of different toolkits.
 Copyright (C) 1992, 1993 Lucid, Inc.
-Copyright (C) 1994, 1995, 1996, 1999, 2000, 2001, 2002, 2003, 2004,
-  2005, 2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+Copyright (C) 1994-1996, 1999-2011  Free Software Foundation, Inc.
 
 This file is part of the Lucid Widget Library.
 
@@ -66,21 +65,21 @@ static widget_info*
 all_widget_info = NULL;
 
 #ifdef USE_MOTIF
-char *lwlib_toolkit_type = "motif";
+const char *lwlib_toolkit_type = "motif";
 #else
-char *lwlib_toolkit_type = "lucid";
+const char *lwlib_toolkit_type = "lucid";
 #endif
 
 static widget_value *merge_widget_value (widget_value *,
                                          widget_value *,
                                          int, int *);
 static void instantiate_widget_instance (widget_instance *);
-static int my_strcasecmp (char *, char *);
+static int my_strcasecmp (const char *, const char *);
 static void safe_free_str (char *);
 static void free_widget_value_tree (widget_value *);
 static widget_value *copy_widget_value_tree (widget_value *,
                                              change_type);
-static widget_info *allocate_widget_info (char *, char *, LWLIB_ID,
+static widget_info *allocate_widget_info (const char *, const char *, LWLIB_ID,
                                           widget_value *,
                                           lw_callback, lw_callback,
                                           lw_callback, lw_callback);
@@ -92,14 +91,14 @@ static void free_widget_instance (widget_instance *);
 static widget_info *get_widget_info (LWLIB_ID, Boolean);
 static widget_instance *get_widget_instance (Widget, Boolean);
 static widget_instance *find_instance (LWLIB_ID, Widget, Boolean);
-static Boolean safe_strcmp (char *, char *);
-static Widget name_to_widget (widget_instance *, char *);
+static Boolean safe_strcmp (const char *, const char *);
+static Widget name_to_widget (widget_instance *, const char *);
 static void set_one_value (widget_instance *, widget_value *, Boolean);
 static void update_one_widget_instance (widget_instance *, Boolean);
 static void update_all_widget_values (widget_info *, Boolean);
 static void initialize_widget_instance (widget_instance *);
-static widget_creation_function find_in_table (char *, widget_creation_entry *);
-static Boolean dialog_spec_p (char *);
+static widget_creation_function find_in_table (const char *, const widget_creation_entry *);
+static Boolean dialog_spec_p (const char *);
 static void destroy_one_instance (widget_instance *);
 static void lw_pop_all_widgets (LWLIB_ID, Boolean);
 static Boolean get_one_value (widget_instance *, widget_value *);
@@ -110,9 +109,7 @@ safe_strdup (const char *s)
 {
   char *result;
   if (! s) return 0;
-  result = (char *) malloc (strlen (s) + 1);
-  if (! result)
-    return 0;
+  result = (char *) xmalloc (strlen (s) + 1);
   strcpy (result, s);
   return result;
 }
@@ -120,7 +117,7 @@ safe_strdup (const char *s)
 /* Like strcmp but ignore differences in case.  */
 
 static int
-my_strcasecmp (char *s1, char *s2)
+my_strcasecmp (const char *s1, const char *s2)
 {
   while (1)
     {
@@ -158,7 +155,7 @@ malloc_widget_value (void)
     }
   else
     {
-      wv = (widget_value *) malloc (sizeof (widget_value));
+      wv = (widget_value *) xmalloc (sizeof (widget_value));
       malloc_cpt++;
     }
   memset ((void*) wv, 0, sizeof (widget_value));
@@ -249,8 +246,8 @@ copy_widget_value_tree (widget_value *val, change_type change)
 }
 
 static widget_info *
-allocate_widget_info (char* type,
-                      char* name,
+allocate_widget_info (const char* type,
+                      const char* name,
                       LWLIB_ID id,
                       widget_value* val,
                       lw_callback pre_activate_cb,
@@ -258,7 +255,7 @@ allocate_widget_info (char* type,
                       lw_callback post_activate_cb,
                       lw_callback highlight_cb)
 {
-  widget_info* info = (widget_info*)malloc (sizeof (widget_info));
+  widget_info* info = (widget_info*) xmalloc (sizeof (widget_info));
   info->type = safe_strdup (type);
   info->name = safe_strdup (name);
   info->id = id;
@@ -300,7 +297,7 @@ static widget_instance *
 allocate_widget_instance (widget_info* info, Widget parent, Boolean pop_up_p)
 {
   widget_instance* instance =
-    (widget_instance*)malloc (sizeof (widget_instance));
+    (widget_instance*) xmalloc (sizeof (widget_instance));
   memset (instance, 0, sizeof *instance);
   instance->parent = parent;
   instance->pop_up_p = pop_up_p;
@@ -402,7 +399,7 @@ find_instance (LWLIB_ID id, Widget parent, Boolean pop_up_p)
 
 /* utility function for widget_value */
 static Boolean
-safe_strcmp (char *s1, char *s2)
+safe_strcmp (const char *s1, const char *s2)
 {
   if (!!s1 ^ !!s2) return True;
   return (s1 && s2) ? strcmp (s1, s2) : s1 ? False : !!s2;
@@ -586,7 +583,7 @@ merge_widget_value (widget_value *val1,
 
 /* modifying the widgets */
 static Widget
-name_to_widget (widget_instance *instance, char *name)
+name_to_widget (widget_instance *instance, const char *name)
 {
   Widget widget = NULL;
 
@@ -729,9 +726,9 @@ initialize_widget_instance (widget_instance *instance)
 
 
 static widget_creation_function
-find_in_table (char *type, widget_creation_entry *table)
+find_in_table (const char *type, const widget_creation_entry *table)
 {
-  widget_creation_entry* cur;
+  const widget_creation_entry* cur;
   for (cur = table; cur->type; cur++)
     if (!my_strcasecmp (type, cur->type))
       return cur->function;
@@ -739,7 +736,7 @@ find_in_table (char *type, widget_creation_entry *table)
 }
 
 static Boolean
-dialog_spec_p (char *name)
+dialog_spec_p (const char *name)
 {
   /* return True if name matches [EILPQeilpq][1-9][Bb] or
      [EILPQeilpq][1-9][Bb][Rr][1-9] */
@@ -823,8 +820,8 @@ instantiate_widget_instance (widget_instance *instance)
 }
 
 void
-lw_register_widget (char* type,
-                    char* name,
+lw_register_widget (const char* type,
+                    const char* name,
                     LWLIB_ID id,
                     widget_value* val,
                     lw_callback pre_activate_cb,
@@ -867,7 +864,7 @@ lw_make_widget (LWLIB_ID id, Widget parent, Boolean pop_up_p)
 }
 
 Widget
-lw_create_widget (char* type, char* name, LWLIB_ID id, widget_value* val,
+lw_create_widget (const char* type, const char* name, LWLIB_ID id, widget_value* val,
 		  Widget parent, Boolean pop_up_p,
 		  lw_callback pre_activate_cb, lw_callback selection_cb,
 		  lw_callback post_activate_cb, lw_callback highlight_cb)
@@ -1317,7 +1314,7 @@ lw_allow_resizing (Widget w, Boolean flag)
    to similar ones that are supported.  */
 
 int
-lw_separator_p (char *label, enum menu_separator *type, int motif_p)
+lw_separator_p (const char *label, enum menu_separator *type, int motif_p)
 {
   int separator_p = 0;
 
@@ -1326,7 +1323,7 @@ lw_separator_p (char *label, enum menu_separator *type, int motif_p)
     {
       static struct separator_table
       {
-	char *name;
+	const char *name;
 	enum menu_separator type;
       }
       separator_names[] =
@@ -1371,7 +1368,7 @@ lw_separator_p (char *label, enum menu_separator *type, int motif_p)
       /* Alternative, more Emacs-style names.  */
       static struct separator_table
       {
-	char *name;
+	const char *name;
 	enum menu_separator type;
       }
       separator_names[] =
@@ -1422,5 +1419,3 @@ lw_separator_p (char *label, enum menu_separator *type, int motif_p)
   return separator_p;
 }
 
-/* arch-tag: 3d730f36-a441-4a71-9971-48ef3b5a4d9f
-   (do not change this comment) */

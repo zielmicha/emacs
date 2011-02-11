@@ -1,7 +1,7 @@
 ;;; sgml-mode.el --- SGML- and HTML-editing modes -*- coding: utf-8 -*-
 
-;; Copyright (C) 1992, 1995, 1996, 1998, 2001, 2002, 2003, 2004,
-;;   2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1995-1996, 1998, 2001-2011
+;;   Free Software Foundation, Inc.
 
 ;; Author: James Clark <jjc@jclark.com>
 ;; Maintainer: FSF
@@ -100,6 +100,7 @@ This takes effect when first loading the `sgml-mode' library.")
     (define-key map "\C-c\C-d" 'sgml-delete-tag)
     (define-key map "\C-c\^?" 'sgml-delete-tag)
     (define-key map "\C-c?" 'sgml-tag-help)
+    (define-key map "\C-c]" 'sgml-close-tag)
     (define-key map "\C-c/" 'sgml-close-tag)
 
     ;; Redundant keybindings, for consistency with TeX mode.
@@ -293,11 +294,12 @@ Any terminating `>' or `/' is not matched.")
 (defvar sgml-font-lock-keywords sgml-font-lock-keywords-1
   "*Rules for highlighting SGML code.  See also `sgml-tag-face-alist'.")
 
-(defvar sgml-font-lock-syntactic-keywords
+(defconst sgml-syntax-propertize-function
+  (syntax-propertize-rules
   ;; Use the `b' style of comments to avoid interference with the -- ... --
   ;; comments recognized when `sgml-specials' includes ?-.
   ;; FIXME: beware of <!--> blabla <!--> !!
-  '(("\\(<\\)!--" (1 "< b"))
+   ("\\(<\\)!--" (1 "< b"))
     ("--[ \t\n]*\\(>\\)" (1 "> b"))
     ;; Double quotes outside of tags should not introduce strings.
     ;; Be careful to call `syntax-ppss' on a position before the one we're
@@ -382,6 +384,9 @@ a DOCTYPE or an XML declaration."
   (save-excursion
     (goto-char (point-min))
     (or (string= "xml" (file-name-extension (or buffer-file-name "")))
+        ;; Maybe the buffer-size check isn't needed, I don't know.
+        (and (zerop (buffer-size))
+             (string= "xhtml" (file-name-extension (or buffer-file-name ""))))
 	(looking-at "\\s-*<\\?xml")
 	(when (re-search-forward
 	       (eval-when-compile
@@ -477,9 +482,9 @@ Do \\[describe-key] on the following bindings to discover what they do.
        '((sgml-font-lock-keywords
           sgml-font-lock-keywords-1
           sgml-font-lock-keywords-2)
-         nil t nil nil
-         (font-lock-syntactic-keywords
-          . sgml-font-lock-syntactic-keywords)))
+         nil t))
+  (set (make-local-variable 'syntax-propertize-function)
+       sgml-syntax-propertize-function)
   (set (make-local-variable 'facemenu-add-face-function)
        'sgml-mode-facemenu-add-face-function)
   (set (make-local-variable 'sgml-xml-mode) (sgml-xml-guess))
@@ -2151,5 +2156,4 @@ Can be used as a value for `html-mode-hook'."
 
 (provide 'sgml-mode)
 
-;; arch-tag: 9675da94-b7f9-4bda-ad19-73ed7b4fb401
 ;;; sgml-mode.el ends here

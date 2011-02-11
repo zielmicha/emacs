@@ -1,6 +1,5 @@
 /* Markers: examining, setting and deleting.
-   Copyright (C) 1985, 1997, 1998, 2001, 2002, 2003, 2004, 2005, 2006,
-                 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1997-1998, 2001-2011  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -27,16 +26,12 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 /* Record one cached position found recently by
    buf_charpos_to_bytepos or buf_bytepos_to_charpos.  */
 
-static int cached_charpos;
-static int cached_bytepos;
+static EMACS_INT cached_charpos;
+static EMACS_INT cached_bytepos;
 static struct buffer *cached_buffer;
 static int cached_modiff;
 
-static void byte_char_debug_check (struct buffer *, int, int);
-
-/* Nonzero means enable debugging checks on byte/char correspondences.  */
-
-static int byte_debug_flag;
+static void byte_char_debug_check (struct buffer *, EMACS_INT, EMACS_INT);
 
 void
 clear_charpos_cache (struct buffer *b)
@@ -60,12 +55,12 @@ clear_charpos_cache (struct buffer *b)
 
 #define CONSIDER(CHARPOS, BYTEPOS)					\
 {									\
-  int this_charpos = (CHARPOS);						\
+  EMACS_INT this_charpos = (CHARPOS);					\
   int changed = 0;							\
 									\
   if (this_charpos == charpos)						\
     {									\
-      int value = (BYTEPOS);						\
+      EMACS_INT value = (BYTEPOS);				       	\
       if (byte_debug_flag)						\
 	byte_char_debug_check (b, charpos, value);			\
       return value;							\
@@ -90,7 +85,7 @@ clear_charpos_cache (struct buffer *b)
     {									\
       if (best_above - best_below == best_above_byte - best_below_byte)	\
         {								\
-	  int value = best_below_byte + (charpos - best_below);		\
+	  EMACS_INT value = best_below_byte + (charpos - best_below);	\
 	  if (byte_debug_flag)						\
 	    byte_char_debug_check (b, charpos, value);			\
 	  return value;							\
@@ -99,9 +94,9 @@ clear_charpos_cache (struct buffer *b)
 }
 
 static void
-byte_char_debug_check (struct buffer *b, int charpos, int bytepos)
+byte_char_debug_check (struct buffer *b, EMACS_INT charpos, EMACS_INT bytepos)
 {
-  int nchars = 0;
+  EMACS_INT nchars = 0;
 
   if (bytepos > BUF_GPT_BYTE (b))
     {
@@ -118,18 +113,18 @@ byte_char_debug_check (struct buffer *b, int charpos, int bytepos)
     abort ();
 }
 
-int
-charpos_to_bytepos (int charpos)
+EMACS_INT
+charpos_to_bytepos (EMACS_INT charpos)
 {
   return buf_charpos_to_bytepos (current_buffer, charpos);
 }
 
-int
-buf_charpos_to_bytepos (struct buffer *b, int charpos)
+EMACS_INT
+buf_charpos_to_bytepos (struct buffer *b, EMACS_INT charpos)
 {
   struct Lisp_Marker *tail;
-  int best_above, best_above_byte;
-  int best_below, best_below_byte;
+  EMACS_INT best_above, best_above_byte;
+  EMACS_INT best_below, best_below_byte;
 
   if (charpos < BUF_BEG (b) || charpos > BUF_Z (b))
     abort ();
@@ -247,11 +242,11 @@ buf_charpos_to_bytepos (struct buffer *b, int charpos)
 /* Used for debugging: recompute the bytepos corresponding to CHARPOS
    in the simplest, most reliable way.  */
 
-int
-verify_bytepos (int charpos)
+EMACS_INT
+verify_bytepos (EMACS_INT charpos)
 {
-  int below = 1;
-  int below_byte = 1;
+  EMACS_INT below = 1;
+  EMACS_INT below_byte = 1;
 
   while (below != charpos)
     {
@@ -269,12 +264,12 @@ verify_bytepos (int charpos)
 
 #define CONSIDER(BYTEPOS, CHARPOS)					\
 {									\
-  int this_bytepos = (BYTEPOS);						\
+  EMACS_INT this_bytepos = (BYTEPOS);					\
   int changed = 0;							\
 									\
   if (this_bytepos == bytepos)						\
     {									\
-      int value = (CHARPOS);						\
+      EMACS_INT value = (CHARPOS);				       	\
       if (byte_debug_flag)						\
 	byte_char_debug_check (b, value, bytepos);			\
       return value;							\
@@ -299,7 +294,7 @@ verify_bytepos (int charpos)
     {									\
       if (best_above - best_below == best_above_byte - best_below_byte)	\
 	{								\
-	  int value = best_below + (bytepos - best_below_byte);		\
+	  EMACS_INT value = best_below + (bytepos - best_below_byte);	\
 	  if (byte_debug_flag)						\
 	    byte_char_debug_check (b, value, bytepos);			\
 	  return value;							\
@@ -307,18 +302,18 @@ verify_bytepos (int charpos)
     }									\
 }
 
-int
-bytepos_to_charpos (int bytepos)
+EMACS_INT
+bytepos_to_charpos (EMACS_INT bytepos)
 {
   return buf_bytepos_to_charpos (current_buffer, bytepos);
 }
 
-int
-buf_bytepos_to_charpos (struct buffer *b, int bytepos)
+EMACS_INT
+buf_bytepos_to_charpos (struct buffer *b, EMACS_INT bytepos)
 {
   struct Lisp_Marker *tail;
-  int best_above, best_above_byte;
-  int best_below, best_below_byte;
+  EMACS_INT best_above, best_above_byte;
+  EMACS_INT best_below, best_below_byte;
 
   if (bytepos < BUF_BEG_BYTE (b) || bytepos > BUF_Z_BYTE (b))
     abort ();
@@ -470,7 +465,7 @@ Then it no longer slows down editing in any buffer.
 Returns MARKER.  */)
   (Lisp_Object marker, Lisp_Object position, Lisp_Object buffer)
 {
-  register int charno, bytepos;
+  register EMACS_INT charno, bytepos;
   register struct buffer *b;
   register struct Lisp_Marker *m;
 
@@ -545,7 +540,7 @@ Returns MARKER.  */)
 Lisp_Object
 set_marker_restricted (Lisp_Object marker, Lisp_Object pos, Lisp_Object buffer)
 {
-  register int charno, bytepos;
+  register EMACS_INT charno, bytepos;
   register struct buffer *b;
   register struct Lisp_Marker *m;
 
@@ -618,7 +613,7 @@ set_marker_restricted (Lisp_Object marker, Lisp_Object pos, Lisp_Object buffer)
    character position and the corresponding byte position.  */
 
 Lisp_Object
-set_marker_both (Lisp_Object marker, Lisp_Object buffer, int charpos, int bytepos)
+set_marker_both (Lisp_Object marker, Lisp_Object buffer, EMACS_INT charpos, EMACS_INT bytepos)
 {
   register struct buffer *b;
   register struct Lisp_Marker *m;
@@ -666,7 +661,7 @@ set_marker_both (Lisp_Object marker, Lisp_Object buffer, int charpos, int bytepo
    be outside the visible part.  */
 
 Lisp_Object
-set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer, int charpos, int bytepos)
+set_marker_restricted_both (Lisp_Object marker, Lisp_Object buffer, EMACS_INT charpos, EMACS_INT bytepos)
 {
   register struct buffer *b;
   register struct Lisp_Marker *m;
@@ -776,7 +771,7 @@ unchain_marker (register struct Lisp_Marker *marker)
 
 /* Return the char position of marker MARKER, as a C integer.  */
 
-int
+EMACS_INT
 marker_position (Lisp_Object marker)
 {
   register struct Lisp_Marker *m = XMARKER (marker);
@@ -790,12 +785,12 @@ marker_position (Lisp_Object marker)
 
 /* Return the byte position of marker MARKER, as a C integer.  */
 
-int
+EMACS_INT
 marker_byte_position (Lisp_Object marker)
 {
   register struct Lisp_Marker *m = XMARKER (marker);
   register struct buffer *buf = m->buffer;
-  register int i = m->bytepos;
+  register EMACS_INT i = m->bytepos;
 
   if (!buf)
     error ("Marker does not point anywhere");
@@ -806,16 +801,18 @@ marker_byte_position (Lisp_Object marker)
   return i;
 }
 
-DEFUN ("copy-marker", Fcopy_marker, Scopy_marker, 1, 2, 0,
+DEFUN ("copy-marker", Fcopy_marker, Scopy_marker, 0, 2, 0,
        doc: /* Return a new marker pointing at the same place as MARKER.
 If argument is a number, makes a new marker pointing
 at that position in the current buffer.
+If MARKER is not specified, the new marker does not point anywhere.
 The optional argument TYPE specifies the insertion type of the new marker;
 see `marker-insertion-type'.  */)
   (register Lisp_Object marker, Lisp_Object type)
 {
   register Lisp_Object new;
 
+  if (!NILP (marker))
   CHECK_TYPE (INTEGERP (marker) || MARKERP (marker), Qinteger_or_marker_p, marker);
 
   new = Fmake_marker ();
@@ -854,7 +851,7 @@ DEFUN ("buffer-has-markers-at", Fbuffer_has_markers_at, Sbuffer_has_markers_at,
   (Lisp_Object position)
 {
   register struct Lisp_Marker *tail;
-  register int charno;
+  register EMACS_INT charno;
 
   charno = XINT (position);
 
@@ -895,10 +892,8 @@ syms_of_marker (void)
   defsubr (&Sset_marker_insertion_type);
   defsubr (&Sbuffer_has_markers_at);
 
-  DEFVAR_BOOL ("byte-debug-flag", &byte_debug_flag,
+  DEFVAR_BOOL ("byte-debug-flag", byte_debug_flag,
 	       doc: /* Non-nil enables debugging checks in byte/char position conversions.  */);
   byte_debug_flag = 0;
 }
 
-/* arch-tag: 50aa418f-cdd0-4838-b64b-94aa4b2a3b74
-   (do not change this comment) */

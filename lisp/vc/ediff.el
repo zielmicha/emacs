@@ -1,11 +1,11 @@
 ;;; ediff.el --- a comprehensive visual interface to diff & patch
 
-;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-;;   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1994-2011 Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
 ;; Created: February 2, 1994
 ;; Keywords: comparing, merging, patching, vc, tools, unix
+;; Version: 2.81.4
 
 ;; Yoni Rabkin <yoni@rabkins.net> contacted the maintainer of this
 ;; file on 20/3/2008, and the maintainer agreed that when a bug is
@@ -1561,5 +1561,4 @@ With optional NODE, goes to that node."
 ;; eval: (put 'ediff-with-current-buffer 'edebug-form-spec '(form body))
 ;; End:
 
-;; arch-tag: 97c71396-db02-4f41-8b48-6a51c3348fcc
 ;;; ediff.el ends here

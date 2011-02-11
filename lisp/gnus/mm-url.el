@@ -1,7 +1,6 @@
 ;;; mm-url.el --- a wrapper of url functions/commands for Gnus
 
-;; Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 2001-2011  Free Software Foundation, Inc.
 
 ;; Author: Shenghuo Zhu <zsh@cs.rochester.edu>
 
@@ -365,15 +364,23 @@ If FOLLOW-REFRESH is non-nil, redirect refresh url in META."
 (defun mm-url-decode-entities ()
   "Decode all HTML entities."
   (goto-char (point-min))
-  (while (re-search-forward "&\\(#[0-9]+\\|[a-z]+[0-9]*\\);" nil t)
-    (let ((elem (if (eq (aref (match-string 1) 0) ?\#)
-			(let ((c (mm-ucs-to-char
-				  (string-to-number
-				   (substring (match-string 1) 1)))))
-			  (if (mm-char-or-char-int-p c) c ?#))
-		      (or (cdr (assq (intern (match-string 1))
-				     mm-url-html-entities))
-			  ?#))))
+  (while (re-search-forward "&\\(#[0-9]+\\|#x[0-9a-f]+\\|[a-z]+[0-9]*\\);"
+			    nil t)
+    (let* ((entity (match-string 1))
+	   (elem (if (eq (aref entity 0) ?\#)
+		     (let ((c
+			    ;; Hex number: &#x3212
+			    (if (eq (aref entity 1) ?x)
+				(string-to-number (substring entity 2)
+						  16)
+			      ;; Decimal number: &#23
+			      (string-to-number (substring entity 1)))))
+		       (setq c (or (cdr (assq c mm-extra-numeric-entities))
+				   (mm-ucs-to-char c)))
+		       (if (mm-char-or-char-int-p c) c ?#))
+		   (or (cdr (assq (intern entity)
+				  mm-url-html-entities))
+		       ?#))))
       (unless (stringp elem)
 	(setq elem (char-to-string elem)))
       (replace-match elem t t))))
@@ -496,5 +503,4 @@ spaces.  Die Die Die."
 
 (provide 'mm-url)
 
-;; arch-tag: 0594f9b3-417c-48b0-adc2-5082e1e7917f
 ;;; mm-url.el ends here

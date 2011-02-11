@@ -1,11 +1,11 @@
 ;;; wid-edit.el --- Functions for creating and using widgets -*-byte-compile-dynamic: t;-*-
 ;;
-;; Copyright (C) 1996, 1997, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-;;   2006, 2007, 2008, 2009, 2010  Free Software Foundation, Inc.
+;; Copyright (C) 1996-1997, 1999-2011  Free Software Foundation, Inc.
 ;;
 ;; Author: Per Abrahamsen <abraham@dina.kvl.dk>
 ;; Maintainer: FSF
 ;; Keywords: extensions
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -55,8 +55,6 @@
 ;; See `widget.el'.
 
 ;;; Code:
-
-(defvar widget)
 
 ;;; Compatibility.
 
@@ -317,9 +315,8 @@ size field.")
 
 (defvar widget-field-use-before-change t
   "Non-nil means use `before-change-functions' to track editable fields.
-This enables the use of undo, but doesn't work on Emacs 19.34 and earlier.
-Using before hooks also means that the :notify function can't know the
-new value.")
+This enables the use of undo.  Using before hooks also means that
+the :notify function can't know the new value.")
 
 (defun widget-specify-field (widget from to)
   "Specify editable button for WIDGET between FROM and TO."
@@ -639,7 +636,8 @@ extension (xpm, xbm, gif, jpg, or png) located in
 		specs)
 	   (dolist (elt widget-image-conversion)
 	     (dolist (ext (cdr elt))
-	       (push (list :type (car elt) :file (concat image ext)) specs)))
+	       (push (list :type (car elt) :file (concat image ext))
+		     specs)))
  	   (find-image (nreverse specs))))
 	(t
 	 ;; Oh well.
@@ -1053,7 +1051,7 @@ POS defaults to the value of (point)."
 
 (defvar widget-use-overlay-change t
   "If non-nil, use overlay change functions to tab around in the buffer.
-This is much faster, but doesn't work reliably on Emacs 19.34.")
+This is much faster.")
 
 (defun widget-move (arg)
   "Move point to the ARG next field or button.
@@ -1461,11 +1459,15 @@ The value of the :type attribute should be an unconverted widget type."
   :notify 'widget-default-notify
   :prompt-value 'widget-default-prompt-value)
 
+(defvar widget--completing-widget)
+
 (defun widget-default-complete (widget)
   "Call the value of the :complete-function property of WIDGET.
-If that does not exist, call the value of `widget-complete-field'."
-  (call-interactively (or (widget-get widget :complete-function)
-			  widget-complete-field)))
+If that does not exist, call the value of `widget-complete-field'.
+During this call, `widget--completing-widget' is bound to WIDGET."
+  (let ((widget--completing-widget widget))
+    (call-interactively (or (widget-get widget :complete-function)
+			    widget-complete-field))))
 
 (defun widget-default-create (widget)
   "Create WIDGET at point in the current buffer."
@@ -2159,21 +2161,13 @@ when he invoked the menu."
 
 (defun widget-toggle-value-create (widget)
   "Insert text representing the `on' and `off' states."
-  (if (widget-value widget)
-      (let ((image (widget-get widget :on-glyph)))
-	(and (display-graphic-p)
-	     (listp image)
-	     (not (eq (car image) 'image))
-	     (widget-put widget :on-glyph (setq image (eval image))))
-	(widget-image-insert widget
-			     (widget-get widget :on)
-			     image))
-    (let ((image (widget-get widget :off-glyph)))
-      (and (display-graphic-p)
-	   (listp image)
-	   (not (eq (car image) 'image))
-	   (widget-put widget :off-glyph (setq image (eval image))))
-      (widget-image-insert widget (widget-get widget :off) image))))
+  (let* ((val (widget-value widget))
+	 (text (widget-get widget (if val :on :off)))
+	 (img (widget-image-find
+	       (widget-get widget (if val :on-glyph :off-glyph)))))
+    (widget-image-insert widget (or text "")
+			 (if img
+			     (append img '(:ascent center))))))
 
 (defun widget-toggle-action (widget &optional event)
   ;; Toggle value.
@@ -2192,19 +2186,9 @@ when he invoked the menu."
   ;; We could probably do the same job as the images using single
   ;; space characters in a boxed face with a stretch specification to
   ;; make them square.
-  :on-glyph '(create-image "\300\300\141\143\067\076\034\030"
-			   'xbm t :width 8 :height 8
-			   :background "grey75"	; like default mode line
-			   :foreground "black"
-			   :relief -2
-			   :ascent 'center)
+  :on-glyph "checked"
   :off "[ ]"
-  :off-glyph '(create-image (make-string 8 0)
-			    'xbm t :width 8 :height 8
-			    :background "grey75"
-			    :foreground "black"
-			    :relief -2
-			    :ascent 'center)
+  :off-glyph "unchecked"
   :help-echo "Toggle this item."
   :action 'widget-checkbox-action)
 
@@ -2236,11 +2220,10 @@ when he invoked the menu."
 
 (defun widget-checklist-value-create (widget)
   ;; Insert all values
-  (let ((alist (widget-checklist-match-find widget (widget-get widget :value)))
-	(args (widget-get widget :args)))
-    (while args
-      (widget-checklist-add-item widget (car args) (assq (car args) alist))
-      (setq args (cdr args)))
+  (let ((alist (widget-checklist-match-find widget))
+	(args  (widget-get widget :args)))
+    (dolist (item args)
+      (widget-checklist-add-item widget item (assq item alist)))
     (widget-put widget :children (nreverse (widget-get widget :children)))))
 
 (defun widget-checklist-add-item (widget type chosen)
@@ -2313,9 +2296,10 @@ If the item is checked, CHOSEN is a cons whose cdr is the value."
 		     values nil)))))
     (cons found rest)))
 
-(defun widget-checklist-match-find (widget vals)
+(defun widget-checklist-match-find (widget &optional vals)
   "Find the vals which match a type in the checklist.
 Return an alist of (TYPE MATCH)."
+  (or vals (setq vals (widget-get widget :value)))
   (let ((greedy (widget-get widget :greedy))
 	(args (copy-sequence (widget-get widget :args)))
 	found)
@@ -2808,11 +2792,10 @@ Return an alist of (TYPE MATCH)."
 	argument answer found)
     (while args
       (setq argument (car args)
-	    args (cdr args)
-	    answer (widget-match-inline argument vals))
-      (if answer
-	  (setq vals (cdr answer)
-		found (append found (car answer)))
+	    args     (cdr args))
+      (if (setq answer (widget-match-inline argument vals))
+	  (setq found (append found (car answer))
+		vals (cdr answer))
 	(setq vals nil
 	      args nil)))
     (if answer
@@ -2824,34 +2807,22 @@ Return an alist of (TYPE MATCH)."
   "An indicator and manipulator for hidden items.
 
 The following properties have special meanings for this widget:
-:on-image  Image filename or spec to display when the item is visible.
+:on-glyph  Image filename or spec to display when the item is visible.
 :on        Text shown if the \"on\" image is nil or cannot be displayed.
-:off-image Image filename or spec to display when the item is hidden.
+:off-glyph Image filename or spec to display when the item is hidden.
 :off       Text shown if the \"off\" image is nil cannot be displayed."
   :format "%[%v%]"
   :button-prefix ""
   :button-suffix ""
-  :on-image "down"
+  :on-glyph "down"
   :on "Hide"
-  :off-image "right"
+  :off-glyph "right"
   :off "Show"
   :value-create 'widget-visibility-value-create
   :action 'widget-toggle-action
   :match (lambda (widget value) t))
 
-(defun widget-visibility-value-create (widget)
-  ;; Insert text representing the `on' and `off' states.
-  (let* ((val (widget-value widget))
-	 (text (widget-get widget (if val :on :off)))
-	 (img (widget-image-find
-	       (widget-get widget (if val :on-image :off-image)))))
-    (widget-image-insert widget
-			 (if text
-			     (concat widget-push-button-prefix text
-				     widget-push-button-suffix)
-			   "")
-			 (if img
-			     (append img '(:ascent center))))))
+(defalias 'widget-visibility-value-create 'widget-toggle-value-create)
 
 ;;; The `documentation-link' Widget.
 ;;
@@ -3048,14 +3019,13 @@ as the value."
   :complete-function 'ispell-complete-word
   :prompt-history 'widget-string-prompt-value-history)
 
-(defvar widget)
-
 (defun widget-string-complete ()
   "Complete contents of string field.
 Completions are taken from the :completion-alist property of the
 widget.  If that isn't a list, it's evalled and expected to yield a list."
   (interactive)
-  (let* ((completion-ignore-case (widget-get widget :completion-ignore-case))
+  (let* ((widget widget--completing-widget)
+	 (completion-ignore-case (widget-get widget :completion-ignore-case))
 	 (alist (widget-get widget :completion-alist))
 	 (_ (unless (listp alist)
 	      (setq alist (eval alist)))))
@@ -3100,9 +3070,10 @@ It reads a file name from an editable text field."
 (defun widget-file-complete ()
   "Perform completion on file name preceding point."
   (interactive)
-  (completion-in-region (widget-field-start widget)
-                        (max (point) (widget-field-text-end widget))
-                        'completion-file-name-table))
+  (let ((widget widget--completing-widget))
+    (completion-in-region (widget-field-start widget)
+			  (max (point) (widget-field-text-end widget))
+			  'completion-file-name-table)))
 
 (defun widget-file-prompt-value (widget prompt value unbound)
   ;; Read file from minibuffer.
@@ -3725,7 +3696,7 @@ example:
   (widget-insert " ")
   (widget-create-child-and-convert
    widget 'push-button
-   :tag "Choose" :action 'widget-color--choose-action)
+   :tag " Choose " :action 'widget-color--choose-action)
   (widget-insert " "))
 
 (defun widget-color--choose-action (widget &optional event)
@@ -3789,5 +3760,4 @@ example:
 
 (provide 'wid-edit)
 
-;; arch-tag: a076e75e-18a1-4b46-8be5-3f317bcbc707
 ;;; wid-edit.el ends here

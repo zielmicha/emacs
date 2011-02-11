@@ -1,7 +1,7 @@
 ;;; vip.el --- a VI Package for GNU Emacs
 
-;; Copyright (C) 1986, 1987, 1988, 1992, 1993, 1998, 2001, 2002, 2003,
-;;   2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1986-1988, 1992-1993, 1998, 2001-2011
+;;   Free Software Foundation, Inc.
 
 ;; Author: Masahiko Sato <ms@sail.stanford.edu>
 ;; Keywords: emulations
@@ -91,12 +91,12 @@
   "How to reexecute last destructive command.  Value is list (M-COM VAL COM).")
 
 (defcustom vip-shift-width 8
-  "*The number of columns shifted by > and < command."
+  "The number of columns shifted by > and < command."
   :type 'integer
   :group 'vip)
 
 (defcustom vip-re-replace nil
-  "*If t then do regexp replace, if nil then do string replace."
+  "If t then do regexp replace, if nil then do string replace."
   :type 'boolean
   :group 'vip)
 
@@ -116,12 +116,12 @@
   "For use by \";\" command.")
 
 (defcustom vip-search-wrap-around t
-  "*If t, search wraps around."
+  "If t, search wraps around."
   :type 'boolean
   :group 'vip)
 
 (defcustom vip-re-search nil
-  "*If t, search is reg-exp search, otherwise vanilla search."
+  "If t, search is reg-exp search, otherwise vanilla search."
   :type 'boolean
   :group 'vip)
 
@@ -132,22 +132,22 @@
   "If t, search is forward.")
 
 (defcustom vip-case-fold-search nil
-  "*If t, search ignores cases."
+  "If t, search ignores cases."
   :type 'boolean
   :group 'vip)
 
 (defcustom vip-re-query-replace nil
-  "*If t then do regexp replace, if nil then do string replace."
+  "If t then do regexp replace, if nil then do string replace."
   :type 'boolean
   :group 'vip)
 
 (defcustom vip-open-with-indent nil
-  "*If t, indent when open a new line."
+  "If t, indent when open a new line."
   :type 'boolean
   :group 'vip)
 
 (defcustom vip-help-in-insert-mode nil
-  "*If t then C-h is bound to help-command in insert mode.
+  "If t then C-h is bound to help-command in insert mode.
 If nil then it is bound to `delete-backward-char'."
   :type 'boolean
   :group 'vip)
@@ -3054,5 +3054,4 @@ vip-s-string"
 
 (provide 'vip)
 
-;; arch-tag: bff623ef-48f7-41d4-9aa3-2e840c9ab415
 ;;; vip.el ends here

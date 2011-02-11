@@ -1,8 +1,6 @@
 ;;; cc-langs.el --- language specific settings for CC Mode
 
-;; Copyright (C) 1985, 1987, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-;;   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1987, 1992-2011  Free Software Foundation, Inc.
 
 ;; Authors:    2002- Alan Mackenzie
 ;;             1998- Martin Stjernholm
@@ -12,8 +10,8 @@
 ;;             1985 Richard M. Stallman
 ;; Maintainer: bug-cc-mode@gnu.org
 ;; Created:    22-Apr-1997 (split from cc-mode.el)
-;; Version:    See cc-mode.el
-;; Keywords:   c languages oop
+;; Keywords:   c languages
+;; Package:    cc-mode
 
 ;; This file is part of GNU Emacs.
 
@@ -1565,6 +1563,17 @@ be a subset of `c-primitive-type-kwds'."
 	    ;; In CORBA PSDL:
 	    "strong"))
 
+(c-lang-defconst c-typedef-kwds
+  "Prefix keyword\(s\) like \"typedef\" which make a type declaration out
+of a variable declaration."
+  t        '("typedef")
+  (awk idl java) nil)
+
+(c-lang-defconst c-typedef-key
+  ;; Adorned regexp matching `c-typedef-kwds'.
+  t (c-make-keywords-re t (c-lang-const c-typedef-kwds)))
+(c-lang-defvar c-typedef-key (c-lang-const c-typedef-key))
+
 (c-lang-defconst c-type-prefix-kwds
   "Keywords where the following name - if any - is a type name, and
 where the keyword together with the symbol works as a type in
@@ -1730,6 +1739,10 @@ will be handled."
   ;; Unlike most other languages, exception names are not handled as
   ;; types in IDL since they only can occur in "raises" specs.
   idl  (delete "exception" (append (c-lang-const c-typedef-decl-kwds) nil)))
+
+(c-lang-defconst c-typedef-decl-key
+  t  (c-make-keywords-re t (c-lang-const c-typedef-decl-kwds)))
+(c-lang-defvar c-typedef-decl-key (c-lang-const c-typedef-decl-key))
 
 (c-lang-defconst c-typeless-decl-kwds
   "Keywords introducing declarations where the \(first) identifier
@@ -2661,15 +2674,15 @@ Identifier syntax is in effect when this is matched \(see
   c++  (concat "\\("
 	       "[*\(&]"
 	       "\\|"
-	       (concat "\\("	; 2
+	       (c-lang-const c-type-decl-prefix-key)
+	       "\\|"
+	       (concat "\\("   ; 3
 		       ;; If this matches there's special treatment in
 		       ;; `c-font-lock-declarators' and
 		       ;; `c-font-lock-declarations' that check for a
 		       ;; complete name followed by ":: *".
 		       (c-lang-const c-identifier-start)
 		       "\\)")
-	       "\\|"
-	       (c-lang-const c-type-decl-prefix-key)
 	       "\\)"
 	       "\\([^=]\\|$\\)")
   pike "\\(\\*\\)\\([^=]\\|$\\)")
@@ -3122,5 +3135,4 @@ evaluated and should not be quoted."
 
 (cc-provide 'cc-langs)
 
-;; arch-tag: 1ab57482-cfc2-4c5b-b628-3539c3098822
 ;;; cc-langs.el ends here

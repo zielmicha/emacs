@@ -120,7 +120,7 @@
   :group 'debbugs
   :version "24.1")
 
-(defcustom debbugs-gnu-default-severities '("normal")
+(defcustom debbugs-gnu-default-severities '("important" "normal")
   "*The list severities bugs are searched for.
 \"tagged\" is not a severity but marks locally tagged bugs."
   :group 'debbugs-gnu

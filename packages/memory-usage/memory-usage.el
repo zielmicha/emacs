@@ -1,6 +1,6 @@
 ;;; memory-usage.el --- Analyze the memory usage of Emacs in various ways
 
-;; Copyright (C) 2002, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2004, 2012  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@cs.yale.edu>
 ;; Keywords: maint
@@ -78,10 +78,12 @@
     (insert (format "\t%d+%d bytes in symbols\n" (car symbols) (cdr symbols)))
     (insert (format "\t%d+%d bytes in markers\n" (car markers) (cdr markers)))
     (insert (format "\t%d+%d bytes in floats\n" (car floats) (cdr floats)))
-    (insert (format "\t%d+%d bytes in intervals\n" (car intervals) (cdr intervals)))
-    (insert (format "\t%d+%d bytes in string headers\n" (car strings) (cdr strings)))
+    (insert (format "\t%d+%d bytes in intervals\n"
+                    (car intervals) (cdr intervals)))
+    (insert (format "\t%d+%d bytes in string headers\n"
+                    (car strings) (cdr strings)))
     (insert (format "\t%d bytes of string chars\n" chars))
-    (insert (format "\t%d bytes of vector slots\n" chars))
+    (insert (format "\t%d bytes of vector slots\n" vectors))
     (let ((live (+ (car conses)
                    (car symbols)
                    (car markers)

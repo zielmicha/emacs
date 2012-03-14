@@ -1,14 +1,11 @@
 ;;; ioccur.el --- Incremental occur.
 
+;; Copyright (C) 2010-2012  Free Software Foundation, Inc.
+
 ;; Author: Thierry Volpiatto <thierry dot volpiatto at gmail dot com>
-
-;; Copyright (C) 2010~2011 Thierry Volpiatto, all rights reserved.
-
-;; Compatibility: GNU Emacs >=22.3
-
 ;; X-URL: http://mercurial.intuxication.org/hg/ioccur
-
-;; This file is not part of GNU Emacs.
+;; Version: 2.4
+;; Compatibility: GNU Emacs >=22.3
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -21,9 +18,7 @@
 ;; General Public License for more details.
 ;; 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
-;; Floor, Boston, MA 02110-1301, USA.
+;; along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 ;;; Install:
 ;;
@@ -51,7 +46,7 @@
 ;; (add-to-list 'desktop-globals-to-save 'ioccur-history)
 ;;
 ;; For more info See:
-;; [EVAL] (info "(emacs) saving emacs sessions")
+;; [EVAL] (info "(emacs) Saving Emacs Sessions")
 
 ;;; Code:
 (require 'derived)

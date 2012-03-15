@@ -579,7 +579,7 @@ all the time!"
               (1 'ampc-current-song-mark-face)
               (2 'ampc-current-song-marked-face)))))
 
-V;;; *** internal functions
+;;; *** internal functions
 (defun ampc-quote (string)
   (concat "\"" (replace-regexp-in-string "\"" "\\\"" string) "\""))
 

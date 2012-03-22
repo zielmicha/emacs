@@ -141,5 +141,40 @@
     (insert "\n"))
   (goto-char (point-min)))
 
+(defun memory-usage-find-large-variables ()
+  "Find variables whose printed representation takes over 100KB."
+  (interactive)
+  (let ((min-size (* 100 1024)))
+    (pop-to-buffer "*Memory Explorer*")
+    (delete-region (point-min) (point-max))
+    ;; First find large global variables.
+    (mapatoms
+     (lambda (sym)
+       (let ((size (or (and (boundp sym)
+                            (length (prin1-to-string (symbol-value sym))))
+                       0)))
+         (when (> size min-size)
+           (insert (format "%d\tGlobal\t%s\n"
+                           size
+                           (symbol-name sym)))))))
+    ;; Second find large buffer-local variables.
+    (mapc
+     (lambda (buffer)
+       (let ((holder ""))
+         (with-current-buffer buffer
+           (mapc
+            (lambda (var-cons)
+              (let ((size (or (and (consp var-cons)
+                                   (length (prin1-to-string (cdr var-cons))))
+                              0)))
+                (if (> size min-size)
+                    (setq holder (format "%d\t%s\t%s\n"
+                                         size (buffer-name buffer)
+                                         (symbol-name (car var-cons)))))))
+            (buffer-local-variables)))
+         (insert holder)))
+     (buffer-list))
+    (sort-numeric-fields 1 (point-min) (point-max))))
+
 (provide 'memory-usage)
 ;;; memory-usage.el ends here

@@ -120,7 +120,7 @@
   :group 'debbugs
   :version "24.1")
 
-(defcustom debbugs-gnu-default-severities '("important" "normal")
+(defcustom debbugs-gnu-default-severities '("serious" "important" "normal")
   "*The list severities bugs are searched for.
 \"tagged\" is not a severity but marks locally tagged bugs."
   :group 'debbugs-gnu
@@ -137,9 +137,13 @@
   :group 'debbugs-gnu
   :type '(set (const "automake")
 	      (const "coreutils")
+	      (const "debbugs.gnu.org")
 	      (const "emacs")
+	      (const "emacs-xwidgets")
 	      (const "gnus")
-	      (const "libtool"))
+	      (const "guile")
+	      (const "libtool")
+	      (const "woodchuck"))
   :version "24.1")
 
 (defcustom debbugs-gnu-default-hits-per-page 500

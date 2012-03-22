@@ -56,6 +56,19 @@
   (setq n (* n memory-usage-word-size))
   (cons (* n (car c)) (* n (cdr c))))
 
+(defun memory-usage-format (bytes)
+  (setq bytes (/ bytes 1024.0))
+  (let ((units '(;; "B"
+                 "kB" "MB" "GB" "TB")))
+    (while (>= bytes 1024)
+      (setq bytes (/ bytes 1024.0))
+      (setq units (cdr units)))
+    (cond
+     ;; ((integerp bytes) (format "%4d%s" bytes (car units)))
+     ((>= bytes 100) (format "%4.0f%s" bytes (car units)))
+     ((>= bytes 10) (format "%4.1f%s" bytes (car units)))
+     (t (format "%4.2f%s" bytes (car units))))))
+
 ;;;###autoload
 (defun memory-usage ()
   "List all buffers and their memory usage."
@@ -73,17 +86,20 @@
 	 (floats    (memory-usage-mult-cons 2 (nth 5 gc-stats)))
 	 (intervals (memory-usage-mult-cons 7 (nth 6 gc-stats)))
          (strings   (memory-usage-mult-cons 4 (nth 7 gc-stats))))
+    (if (consp vectors) (setq vectors (cdr vectors)))
     (insert (format "Garbage collection stats:\n%s\n\n =>" gc-stats))
-    (insert (format "\t%d+%d bytes in cons cells\n" (car conses) (cdr conses)))
-    (insert (format "\t%d+%d bytes in symbols\n" (car symbols) (cdr symbols)))
-    (insert (format "\t%d+%d bytes in markers\n" (car markers) (cdr markers)))
-    (insert (format "\t%d+%d bytes in floats\n" (car floats) (cdr floats)))
-    (insert (format "\t%d+%d bytes in intervals\n"
-                    (car intervals) (cdr intervals)))
-    (insert (format "\t%d+%d bytes in string headers\n"
-                    (car strings) (cdr strings)))
-    (insert (format "\t%d bytes of string chars\n" chars))
-    (insert (format "\t%d bytes of vector slots\n" vectors))
+    (dolist (x `(("cons cells" . ,conses)
+                 ("symbols" . ,symbols)
+                 ("markers" . ,markers)
+                 ("floats" . ,floats)
+                 ("intervals" . ,intervals)
+                 ("string headers" . ,strings)))
+      (insert (format "\t%s (+ %s dead) in %s\n"
+                    (memory-usage-format (cadr x))
+                    (memory-usage-format (cddr x))
+                    (car x))))
+    (insert (format "\t%s of string chars\n" (memory-usage-format chars)))
+    (insert (format "\t%s of vector slots\n" (memory-usage-format vectors)))
     (let ((live (+ (car conses)
                    (car symbols)
                    (car markers)
@@ -99,13 +115,18 @@
                    (cdr intervals)
                    (cdr strings))))
 
-      (insert (format "\nTotal bytes in lisp objects: %d (live %d, dead %d)\n\n"
-                      (+ dead live) live dead)))
+      (insert (format "\nTotal in lisp objects: %s (live %s, dead %s)\n\n"
+                      (memory-usage-format (+ dead live))
+                      (memory-usage-format live)
+                      (memory-usage-format dead))))
 
-    (insert (format "Buffer ralloc memory usage:\n%d buffers\n%d bytes total (%d in gaps)\n"
-		    num
-		    (apply #'+ (mapcar #'memory-usage-buffer-total-bytes bufs))
-		    (apply #'+ (mapcar #'memory-usage-buffer-gap-bytes bufs))))
+    (insert
+     (format "Buffer ralloc memory usage:\n%d buffers\n%s total (%s in gaps)\n"
+             num
+             (memory-usage-format
+              (apply #'+ (mapcar #'memory-usage-buffer-total-bytes bufs)))
+             (memory-usage-format
+              (apply #'+ (mapcar #'memory-usage-buffer-gap-bytes bufs)))))
     (insert (format "%10s\t%s\t%s\n\n" "Size" "Gap" "Name"))
     (insert (mapconcat
 	     (lambda (b)
@@ -120,7 +141,5 @@
     (insert "\n"))
   (goto-char (point-min)))
 
-
 (provide 'memory-usage)
-;; arch-tag: 04e012f0-3c59-4319-8d1a-e86204671ec5
 ;;; memory-usage.el ends here

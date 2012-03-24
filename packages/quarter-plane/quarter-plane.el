@@ -1,4 +1,4 @@
-;;; quarter-plane.el --- editing using quarter-plane screen model
+;;; quarter-plane.el --- Minor mode for quarter-plane style editing
 
 ;; Copyright (C) 2011  Free Software Foundation, Inc.
 
@@ -21,10 +21,17 @@
 
 ;;; Commentary:
 
-;; This code provides a minor mode to enable the some of picture-mode
-;; commands documented in the Emacs manual in order to treat the
-;; screen as a semi-infinite quarter-plane, without changing the
-;; buffer's major mode.
+;; This package provides Quarter Plane mode, a minor mode which
+;; provides Picture mode style editing (treating the screen as a
+;; semi-infinite quarter-plane).  Unlike Picture mode, it is a minor
+;; modes (see the Emacs manual for the documentation of Picture mode).
+;; Type M-x quarter-plane-mode to enable Quarter Plane mode in the
+;; current buffer, and M-x global-quarter-plane-mode to enable it
+;; globally.
+
+;; In Quarter Plane mode, the commands `right-char', `forward-char',
+;; `previous-line', `next-line', and `mouse-set-point' are rebound to
+;; Quarter Plane commands.
 
 ;; Known issues:
 

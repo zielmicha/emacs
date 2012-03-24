@@ -1,4 +1,4 @@
-;;; csv-mode.el --- major mode for editing comma-separated value files
+;;; csv-mode.el --- major mode for editing comma/char separated values
 
 ;; Copyright (C) 2003, 2004, 2012  Free Software Foundation, Inc
 

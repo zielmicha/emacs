@@ -1,4 +1,4 @@
-;;; ioccur.el --- Incremental occur.
+;;; ioccur.el --- Incremental occur
 
 ;; Copyright (C) 2010-2012  Free Software Foundation, Inc.
 

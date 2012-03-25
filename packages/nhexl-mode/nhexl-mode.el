@@ -21,8 +21,8 @@
 
 ;;; Commentary:
 
-;; This package implements NHexl mode, a minor mode for editing binary
-;; files in hex dump format.  The mode command is called `nhexl-mode'.
+;; This package implements NHexl mode, a minor mode for editing files
+;; in hex dump format.  The mode command is called `nhexl-mode'.
 ;;
 ;; This minor mode implements similar functionality to `hexl-mode',
 ;; but using a different implementation technique, which makes it
@@ -60,7 +60,7 @@
 
 ;;;###autoload
 (define-minor-mode nhexl-mode
-  "Minor mode to edit binary files via hex-dump format"
+  "Minor mode to edit files via hex-dump format"
   :lighter " NHexl"
   (if (not nhexl-mode)
       (progn

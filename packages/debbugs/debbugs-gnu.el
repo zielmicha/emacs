@@ -717,6 +717,8 @@ Used instead of `tabulated-list-print-entry'."
     (define-key map "d" 'debbugs-gnu-display-status)
     (define-key map "g" 'debbugs-gnu-rescan)
     (define-key map "x" 'debbugs-gnu-toggle-suppress)
+    (define-key map "/" 'debbugs-gnu-narrow-to-status)
+    (define-key map "w" 'debbugs-gnu-widen)
     (define-key map "C" 'debbugs-gnu-send-control-message)
     map))
 
@@ -840,6 +842,39 @@ The following commands are available:
     (setq tabulated-list-sort-key (cons "State" nil)))
   (tabulated-list-init-header)
   (tabulated-list-print))
+
+(defun debbugs-gnu-widen ()
+  "Display all the currently selected bug reports."
+  (interactive)
+  (let ((id (debbugs-gnu-current-id t)))
+    (tabulated-list-init-header)
+    (tabulated-list-print)
+    (when id
+      (debbugs-gnu-goto id))))
+
+(defun debbugs-gnu-narrow-to-status (string)
+  "Only display the bugs matching STRING."
+  (interactive "sNarrow to: ")
+  (let ((id (debbugs-gnu-current-id t))
+	status)
+    (debbugs-gnu-widen)
+    (goto-char (point-min))
+    (while (not (eobp))
+      (setq status (debbugs-gnu-current-status))
+      (if (and (not (member string (assq 'keywords status)))
+	       (not (member string (assq 'severity status)))
+	       (not (string-match string (cdr (assq 'originator status))))
+	       (not (string-match string (cdr (assq 'subject status)))))
+	  (delete-region (point) (progn (forward-line 1) (point)))
+	(forward-line 1)))
+    (when id
+      (debbugs-gnu-goto id))))
+
+(defun debbugs-gnu-goto (id)
+  "Go to the line displaying bug ID."
+  (goto-char (point-min))
+  (while (not (equal (debbugs-gnu-current-id t) id))
+    (forward-line 1)))
 
 (defun debbugs-gnu-toggle-tag ()
   "Toggle tag of the report in the current line."

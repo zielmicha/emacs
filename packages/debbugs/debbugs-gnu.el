@@ -846,7 +846,8 @@ The following commands are available:
 (defun debbugs-gnu-widen ()
   "Display all the currently selected bug reports."
   (interactive)
-  (let ((id (debbugs-gnu-current-id t)))
+  (let ((id (debbugs-gnu-current-id t))
+	(buffer-read-only nil))
     (tabulated-list-init-header)
     (tabulated-list-print)
     (when id
@@ -856,6 +857,7 @@ The following commands are available:
   "Only display the bugs matching STRING."
   (interactive "sNarrow to: ")
   (let ((id (debbugs-gnu-current-id t))
+	(buffer-read-only nil)
 	status)
     (debbugs-gnu-widen)
     (goto-char (point-min))
@@ -873,7 +875,8 @@ The following commands are available:
 (defun debbugs-gnu-goto (id)
   "Go to the line displaying bug ID."
   (goto-char (point-min))
-  (while (not (equal (debbugs-gnu-current-id t) id))
+  (while (and (not (eobp))
+	      (not (equal (debbugs-gnu-current-id t) id)))
     (forward-line 1)))
 
 (defun debbugs-gnu-toggle-tag ()

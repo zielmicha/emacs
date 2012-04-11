@@ -852,26 +852,29 @@ The following commands are available:
   (interactive)
   (let ((id (debbugs-gnu-current-id t))
 	(buffer-read-only nil))
+    (setq debbugs-gnu-current-limit nil)
     (tabulated-list-init-header)
     (tabulated-list-print)
-    (setq debbugs-gnu-current-limit nil)
     (when id
       (debbugs-gnu-goto id))))
 
-(defun debbugs-gnu-narrow-to-status (string)
-  "Only display the bugs matching STRING."
-  (interactive "sNarrow to: ")
+(defun debbugs-gnu-narrow-to-status (string &optional status-only)
+  "Only display the bugs matching STRING.
+If STATUS-ONLY (the prefix), ignore matches in the From and
+Subject fields."
+  (interactive "sNarrow to: \np")
   (let ((id (debbugs-gnu-current-id t))
 	(buffer-read-only nil)
 	status)
-    (debbugs-gnu-widen)
     (goto-char (point-min))
     (while (not (eobp))
       (setq status (debbugs-gnu-current-status))
       (if (and (not (member string (assq 'keywords status)))
 	       (not (member string (assq 'severity status)))
-	       (not (string-match string (cdr (assq 'originator status))))
-	       (not (string-match string (cdr (assq 'subject status)))))
+	       (or status-only
+		   (not (string-match string (cdr (assq 'originator status)))))
+	       (or status-only
+		   (not (string-match string (cdr (assq 'subject status))))))
 	  (delete-region (point) (progn (forward-line 1) (point)))
 	(push (cdr (assq 'id status)) debbugs-gnu-current-limit)
 	(forward-line 1)))

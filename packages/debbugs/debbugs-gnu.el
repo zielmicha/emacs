@@ -656,6 +656,9 @@ Used instead of `tabulated-list-print-entry'."
 	(title            (aref cols 3))
 	(title-length     (nth 1 (aref tabulated-list-format 3))))
     (when (and
+	   ;; We may have a narrowing in effect.
+	   (or (not debbugs-gnu-current-limit)
+	       (memq (cdr (assq 'id list-id)) debbugs-gnu-current-limit))
 	   ;; Filter suppressed bugs.
 	   (or (not (widget-get debbugs-gnu-current-widget :suppress))
 	       (not (catch :suppress
@@ -749,6 +752,7 @@ Used instead of `tabulated-list-print-entry'."
     (goto-char pos)))
 
 (defvar debbugs-gnu-sort-state 'number)
+(defvar debbugs-gnu-current-limit nil)
 
 (define-derived-mode debbugs-gnu-mode tabulated-list-mode "Debbugs"
   "Major mode for listing bug reports.
@@ -759,8 +763,8 @@ All normal editing commands are switched off.
 The following commands are available:
 
 \\{debbugs-gnu-mode-map}"
-  (set (make-local-variable 'debbugs-gnu-sort-state)
-       'number)
+  (set (make-local-variable 'debbugs-gnu-sort-state) 'number)
+  (set (make-local-variable 'debbugs-gnu-current-limit) nil)
   (setq tabulated-list-format [("Id"         5 debbugs-gnu-sort-id)
 			       ("State"     20 debbugs-gnu-sort-state)
 			       ("Submitter" 25 t)
@@ -850,6 +854,7 @@ The following commands are available:
 	(buffer-read-only nil))
     (tabulated-list-init-header)
     (tabulated-list-print)
+    (setq debbugs-gnu-current-limit nil)
     (when id
       (debbugs-gnu-goto id))))
 
@@ -868,6 +873,7 @@ The following commands are available:
 	       (not (string-match string (cdr (assq 'originator status))))
 	       (not (string-match string (cdr (assq 'subject status)))))
 	  (delete-region (point) (progn (forward-line 1) (point)))
+	(push (cdr (assq 'id status)) debbugs-gnu-current-limit)
 	(forward-line 1)))
     (when id
       (debbugs-gnu-goto id))))

@@ -851,7 +851,7 @@ The following commands are available:
   "Display all the currently selected bug reports."
   (interactive)
   (let ((id (debbugs-gnu-current-id t))
-	(buffer-read-only nil))
+	(inhibit-read-only t))
     (setq debbugs-gnu-current-limit nil)
     (tabulated-list-init-header)
     (tabulated-list-print)
@@ -864,8 +864,9 @@ If STATUS-ONLY (the prefix), ignore matches in the From and
 Subject fields."
   (interactive "sNarrow to: \np")
   (let ((id (debbugs-gnu-current-id t))
-	(buffer-read-only nil)
+	(inhibit-read-only t)
 	status)
+    (setq debbugs-gnu-current-limit nil)
     (goto-char (point-min))
     (while (not (eobp))
       (setq status (debbugs-gnu-current-status))

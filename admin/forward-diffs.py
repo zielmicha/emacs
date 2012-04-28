@@ -114,7 +114,7 @@ lfile.write('Message-ID: %s\n' % message['message-id'])
 lfile.write('From: %s\n' % msg_from)
 
 if resent_via == message['x-resent-via']:
-    lfile.write('Mail loop; aborting')
+    lfile.write('Mail loop; aborting\n')
     sys.exit(1)
 
 
@@ -142,7 +142,7 @@ for line in text.splitlines():
     lfile.write('Package: %s\n' % pack)
 
     if pack in packs_seen:
-        lfile.write('Already seen this package')
+        lfile.write('Already seen this package\n')
         continue
 
     packs_seen.append(pack)
@@ -159,14 +159,14 @@ for line in text.splitlines():
 
 
         if maint in maints_seen:
-            lfile.write('Already seen this maintainer')
+            lfile.write('Already seen this maintainer\n')
             continue
 
         maints_seen.append(maint)
 
 
         if maint == msg_from:
-            lfile.write('Not resending, since maintainer = committer')
+            lfile.write('Not resending, since maintainer = committer\n')
             continue
 
 

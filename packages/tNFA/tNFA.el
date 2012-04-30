@@ -1,5 +1,4 @@
-;;; tNFA.el --- tagged non-deterministic finite-state automata
-
+;;; tNFA.el --- Tagged non-deterministic finite-state automata
 
 ;; Copyright (C) 2008-2010, 2012   Free Software Foundation, Inc
 

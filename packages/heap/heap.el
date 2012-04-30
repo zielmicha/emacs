@@ -1,5 +1,4 @@
-;;; heap.el --- heap (a.k.a. priority queue) data structures
-
+;;; heap.el --- Heap (a.k.a. priority queue) data structure
 
 ;; Copyright (C) 2004-2006, 2008, 2012  Free Software Foundation, Inc
 

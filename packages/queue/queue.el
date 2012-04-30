@@ -1,10 +1,10 @@
-;;; queue.el --- queue data structures
-
+;;; queue.el --- Queue data structure
 
 ;; Copyright (C) 1991-1995, 2008-2009, 2012  Free Software Foundation, Inc
 
 ;; Author: Inge Wallin <inge@lysator.liu.se>
 ;;         Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1
 ;; Keywords: extensions, data structures, queue
 ;; URL: http://www.dr-qubit.org/emacs.php
@@ -28,9 +28,10 @@
 
 ;;; Commentary:
 ;;
-;; A queue can be used both as a first-in last-out (FILO) and as a first-in
-;; first-out (FIFO) stack, i.e. elements can be added to and removed from the
-;; front or back of the queue.
+;; These queues can be used both as a first-in last-out (FILO) and as a
+;; first-in first-out (FIFO) stack, i.e. elements can be added to the front or
+;; back of the queue, and can be removed from the front. (This type of data
+;; structure is sometimes called an "output-restricted deque".)
 ;;
 ;; You create a queue using `make-queue', add an element to the end of the
 ;; queue using `queue-enqueue', and push an element onto the front of the
@@ -39,6 +40,12 @@
 ;; provided, all starting with the prefix `queue-'.  Functions with prefix
 ;; `queue--' are for internal use only, and should never be used outside this
 ;; package.
+
+
+;;; Change Log:
+;;
+;; Version 0.1
+;; * the old Elib library of the same name, updated to use defstructs
 
 
 

@@ -1,0 +1,100 @@
+
+Notes-mode
+----------
+by John Heidemann, <johnh@isi.edu>
+
+For documentation, see
+	notes-mode.info
+	notes-mode.ps.gz
+	HTML/notes-mode.html
+or	<http://www.isi.edu/~johnh/SOFTWARE/NOTES_MODE/>
+
+
+WHAT'S NEW IN NOTES-MODE?
+-------------------------
+
+Changed ( 8-Aug-08): version 1.27:
+
+Change I/O in @file{mkindexcache} to use locale (the sadly correct thing)
+rather than forcing utf-8 (the Righteous Path).
+Bug report from Geoff Kuenning, a man with an older Unix environment than I.
+
+
+WHAT IS NOTES-MODE?
+-------------------
+
+(From the info documentation)
+
+Notes-mode is an indexing system for on-line note-taking.
+Notes-mode is composed of two parts, the visible part, a major-mode for
+emacs to aid note-taking; and the invisible part, scripts which
+periodically index your notes for you.
+
+For more sales, including
+	Why keep notes?
+	Why keep notes on-line?
+	Why keep notes with notes-mode?
+see <http://www.isi.edu/~johnh/SOFTWARE/NOTES_MODE/notes-mode_1.html>
+
+
+REQUIREMENTS
+------------
+
+Notes-mode requires emacs or xemacs version 19 or 20 (or possibly
+later) and Perl-5.  For information:
+
+	emacs   http://www.gnu.org/software/emacs/emacs.html
+	xemacs  http://www.xemacs.org
+	perl    http://www.perl.com
+
+
+INSTALLATION
+------------
+
+First, get notes mode from <http://www.isi.edu/~johnh/SOFTWARE/NOTES_MODE/>.
+
+To install the basic package:
+	1. ./configure
+	2. make install
+
+(To control what's installed where, use --prefix=/where, or
+--with-lisp-dir=/where, --datadir=/where (for scripts),
+and --infodir=/where.)
+
+For each user:
+	1. Run notesinit
+		(from where it's installed, /usr/local/bin/notesinit
+		by default)
+
+If you have problems with paths being incorrect, please be aware that
+you CANNOT run notes directly out of where you untar it.  The
+installation process customizes the programs for where things are on
+your system.  Make sure you move out of the directory where you
+untarred it before running it.
+
+After you've installed notes mode you're encouraged to subscribe
+to the mailing lists:
+Send the message "subscribe" to
+	notes-mode-announce-request@heidemann.la.ca.us and 
+	notes-mode-talk-request@heidemann.la.ca.us.
+(Or use majordomo@heidemann.la.ca.us.)
+
+
+COPYRIGHT
+---------
+
+Notes-mode is Copyright (C) 1994-2002 by John Heidemann,
+<johnh@isi.edu>.  Notes-mode comes with ABSOLUTELY NO WARRANTY.  This
+is free software, and you are welcome to redistribute it under certain
+conditions.  See the file ``COPYING'' for details about both of these
+conditions.
+
+
+CHANGE HISTORY
+--------------
+
+README:
+$Id: README,v 1.21 2008/08/08 20:33:36 johnh Exp $
+
+See the changes entry in the texinfo documentation.
+

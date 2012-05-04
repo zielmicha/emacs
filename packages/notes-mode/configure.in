@@ -1,0 +1,157 @@
+
+dnl
+dnl notes-mode configure.in
+dnl Copyright (C) 1997-1998 by John Heidemann <johnh@isi.edu>
+dnl
+
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(mkindexcache)
+
+AC_SUBST(package)
+package=notes-mode
+
+dnl
+dnl Find emacs
+dnl
+AC_CHECK_PROGS(emacsbin, emacs gemacs xemacs)
+
+dnl
+dnl Find perl*.
+dnl
+AC_PATH_PROGS(perlbin, perl perl5, no)
+perl_vers=`$perlbin -e 'print $]'`
+case $perl_vers in
+[1234].*) perlbin=no;;
+esac
+if test "$perlbin" = no; then
+  AC_MSG_ERROR($package requires perl 5.0 or later.)
+fi
+
+dnl
+dnl mkdir -p
+dnl
+AC_MSG_CHECKING([mkdir -p])
+if mkdir -p /tmp/mkdir.$$
+then
+  mkdir_p="mkdir -p "
+  rmdir /tmp/mkdir.$$
+  AC_MSG_RESULT($mkdir_p)
+elif test -x ./install-sh
+then
+  mkdir_p="./install-sh -d "
+  AC_MSG_RESULT($mkdir_p)
+else
+  AC_MSG_RESULT([none found])
+  AC_MSG_WARN([  Couldn't find mkdir -p.  You may have to manually mkdir some directories.])
+  mkdir_p="mkdir "
+fi
+AC_SUBST(mkdir_p)
+
+dnl
+dnl Generic things
+dnl
+AC_SUBST(prefix)
+prefix_specified=true
+if test "x$prefix" = xNONE -o "x$prefix" = xnone
+then
+	# hack for install purposes
+	prefix=/usr/local
+	prefix_specified=false
+fi
+
+dnl
+dnl Find lisp install
+dnl
+AC_MSG_CHECKING(lisp installation directory)
+AC_ARG_WITH(lisp-dir,  --with-lisp-dir=path  specify a path for where to install .el files,lisp_dir=$withval,lisp_dir="")
+if test x$lisp_dir = x
+then
+	lisp_dir=`$emacsbin -batch -q -l notes-bootstrap.el -f notes-load-path | grep site-lisp | sed '2,$d'`
+fi
+if test "x$lisp_dir" = x
+then
+	AC_MSG_RESULT(no site-lisp)
+	echo "  ERROR: could not find site-lisp directory in load-path."
+	echo "  Specify destination for lisp file with --with-lisp-dir=/your/path"
+	exit 1
+fi
+AC_MSG_RESULT($lisp_dir)
+if $prefix_specified
+then
+	if test "x$withval" = x
+	then
+		echo "  WARNING: you gave a prefix of $prefix, but emacs wants lisp"
+		echo "  code in $lisp_dir and so that's where it will be installed."
+		echo "  (Currently --prefix doesn't change where lisp code goes.)"
+		echo "  If you want to force it under your prefix,"
+		echo "  then specify the configure option --with-lisp-dir=$prefix/whatever"
+	fi
+fi
+if test -w "$lisp_dir" -o ! -d "$lisp_dir"
+then
+	:
+else
+	echo "  WARNING: You do not have write permissions to $lisp_dir."
+	echo "  (Where the lisp code will be installed.)"
+	echo "  Please do make install with more privileges (as root?),"
+	echo "  fix permissions on the directory,"
+	echo "  or specify a writable destination with --with-lisp-dir=/your/path."
+fi
+AC_SUBST(lisp_dir)
+
+AC_MSG_CHECKING(script install directory)
+AC_SUBST(datadir)
+AC_MSG_RESULT($datadir/$package)
+tdatadir=`eval "echo $datadir"`
+if test -w "$tdatadir" -o ! -d "$tdatadir"
+then
+	:
+else
+	echo "  WARNING:  You do not have write permissions to $datadir ($tdatadir)."
+	echo "  (The program scripts will be installed in $datadir/$package.)"
+	echo "  Please do make install with more priviledges (as root?),"
+	echo "  fix permissions on the directory,"
+	echo "  or specify a writable destination with --datadir=/your/path."
+fi
+AC_MSG_CHECKING(info install directory)
+AC_SUBST(infodir)
+AC_MSG_RESULT($infodir)
+tinfodir=`eval "echo $infodir"`
+if test -w "$tinfodir" -o ! -d "$tinfodir"
+then
+	:
+else
+	echo "  WARNING: You do not have write permissions to $infodir ($tinfodir)."
+	echo "  (Where the info documentation will be put.)"
+	echo "  Please do make install with more priviledges (as root?),"
+	echo "  fix permissions on the directory,"
+	echo "  or specify a writable destination with --infodir=/your/path."
+fi
+dnl install-info
+AC_PATH_PROG(install_info, install-info, no, $PATH:/sbin:/usr/sbin)
+install_info_section='--section=Emacs'
+if test x"$install_info" = xno
+then
+	echo "  WARNING: Could not find install-info."
+	echo "  you will need to add notes-info.info to"
+	echo "  master file ($infodir/dir) manually."
+else
+	dnl detect debian install-info
+	AC_MSG_CHECKING(debian install-info)
+	if $install_info --version 2>&1 |grep 'Ian Jackson' >/dev/null
+	then
+		install_info=no
+		echo "  WARNING: You appear to have the Debian install info."
+		echo "  Their install-info 1.10.21 has an incompatible usage of --section."
+		echo "  Please get them to fix this problem."
+		echo "  For now, I will install without specifying a section"
+		install_info_section=''
+	else
+	    	:
+	fi
+fi
+AC_SUBST(install_info_section)
+
+AC_PROG_INSTALL
+
+AC_OUTPUT(Makefile)

@@ -1,4 +1,4 @@
-;;; dict-tree.el --- Dictionary data structure package
+;;; dict-tree.el --- Dictionary data structure
 
 ;; Copyright (C) 2004-2012  Free Software Foundation, Inc
 

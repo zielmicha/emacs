@@ -464,6 +464,7 @@
 ;;; ================================================================
 ;;;                        Regexp -> tNFA
 
+;;;###autoload
 (defun* tNFA-from-regexp (regexp &key (test 'eq))
   "Create a tagged NFA that recognizes the regular expression REGEXP.
 The return value is the initial state of the tagged NFA.
@@ -1047,6 +1048,7 @@ POS in a string."
 ;;; ================================================================
 ;;;                       tNFA matching
 
+;;;###autoload
 (defun* tNFA-regexp-match (regexp string &key (test 'eq))
   "Return non-nil if STRING matches REGEXP, nil otherwise.
 Sets the match data if there was a match; see `match-beginning',

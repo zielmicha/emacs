@@ -53,7 +53,7 @@ import datetime
 import os
 
 usage="""usage: %prog <-m maintfile> <-l logfile> <-s sender>
-   [-o overmaintfile] [--sendmail]
+   <-p /path/to/packages> [-o overmaintfile] [--sendmail] [--debug]
 Take a GNU ELPA diff on stdin, and forward it to the maintainer(s)."""
 
 parser = optparse.OptionParser()
@@ -64,10 +64,15 @@ parser.add_option( "-l", dest="logfile", default=None,
                    help="file to append output to")
 parser.add_option( "-o", dest="overmaintfile", default=None,
                    help="override file listing packages and maintainers")
+parser.add_option( "-p", dest="packagedir", default=None,
+                   help="path to packages directory")
 parser.add_option( "-s", dest="sender", default=None,
                    help="sender address for forwards")
 parser.add_option( "--sendmail", dest="sendmail", default=False,
                    action="store_true", help="use sendmail rather than smtp")
+parser.add_option( "--debug", dest="debug", default=False,
+                   action="store_true", help="debug only, do not send mail")
+
 
 ( opts, args ) = parser.parse_args()
 
@@ -77,8 +82,16 @@ if not opts.logfile:
 if not opts.maintfile:
     parser.error('No maintfile specified')
 
+if not opts.packagedir:
+    parser.error('No packagedir specified')
+
 if not opts.sender:
     parser.error('No sender specified')
+
+
+if not os.path.isdir(opts.packagedir):
+    sys.stderr.write('Error reading packagedir\n')
+    sys.exit(1)
 
 
 try:
@@ -204,6 +217,9 @@ for line in text.splitlines():
 
         lfile.write('Resending via %s...\n' % ('sendmail'
                     if opts.sendmail else 'smtp') )
+
+
+        if debug: continue
 
 
         if opts.sendmail:

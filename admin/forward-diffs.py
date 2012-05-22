@@ -37,6 +37,10 @@
 ##
 ## package1   email1
 ## package2   email2,email3
+##
+## Use "nomail" for the email field to not send a mail.
+##
+## overmaintfile = like maintfile, but takes precedence over it.
 
 ### Code:
 
@@ -48,7 +52,8 @@ import smtplib
 import datetime
 import os
 
-usage="""usage: %prog <-m maintfile> <-l logfile> <-s sender> [--sendmail]
+usage="""usage: %prog <-m maintfile> <-l logfile> <-s sender>
+   [-o overmaintfile] [--sendmail]
 Take a GNU ELPA diff on stdin, and forward it to the maintainer(s)."""
 
 parser = optparse.OptionParser()
@@ -57,6 +62,8 @@ parser.add_option( "-m", dest="maintfile", default=None,
                    help="file listing packages and maintainers")
 parser.add_option( "-l", dest="logfile", default=None,
                    help="file to append output to")
+parser.add_option( "-o", dest="overmaintfile", default=None,
+                   help="override file listing packages and maintainers")
 parser.add_option( "-s", dest="sender", default=None,
                    help="sender address for forwards")
 parser.add_option( "--sendmail", dest="sendmail", default=False,
@@ -96,6 +103,21 @@ for line in mfile:
     maints[pack] = maint.split(',')
 
 mfile.close()
+
+
+if opts.overmaintfile:
+    try:
+        ofile = open( opts.overmaintfile, 'r' )
+    except Exception as err:
+        lfile.write('Error opening overmaintfile: %s\n' % str(err))
+        sys.exit(1)
+
+    for line in ofile:
+        if re.match( '^#|^ *$', line ): continue
+        (pack, maint) = line.split()
+        maints[pack] = maint.split(',')
+
+    ofile.close()
 
 
 stdin = sys.stdin
@@ -163,6 +185,11 @@ for line in text.splitlines():
             continue
 
         maints_seen.append(maint)
+
+
+        if maint == "nomail":
+            lfile.write('Not resending, no mail is requested\n')
+            continue
 
 
         if maint == msg_from:

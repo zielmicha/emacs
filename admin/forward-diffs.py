@@ -219,7 +219,7 @@ for line in text.splitlines():
                     if opts.sendmail else 'smtp') )
 
 
-        if debug: continue
+        if opts.debug: continue
 
 
         if opts.sendmail:

@@ -28,6 +28,9 @@
 ## 1) Create the maintfile (really this is just an optimization):
 ## forward-diffs.py --create -p packagesdir -m maintfile
 
+## You can start with an empty maintfile and normal operation in 2)
+## will append information as needed.
+
 ## 2) Call from eg procmail to forward diffs.  Example usage:
 
 ## :0c
@@ -297,8 +300,27 @@ for line in text.splitlines():
 
 
     if not pfile in maints:
-        lfile.write('Unknown maintainer\n')
-        continue
+
+        lfile.write('Unknown maintainer, scanning file...\n')
+
+        thismaint = []
+        thisfile = os.path.join( opts.packagedir, pfile )
+
+        scan_file( thisfile, thismaint )
+
+        if not thismaint: continue
+
+        maints[pfile] = thismaint
+
+        ## Append maintainer to file.
+        try:
+            mfile = open( opts.maintfile, 'a' )
+            string = "%-50s %s\n" % (pfile, ",".join(thismaint))
+            mfile.write(string)
+            mfile.close()
+            lfile.write('Appended to maintfile\n')
+        except Exception as err:
+            lfile.write('Error appending to maintfile: %s\n' % str(err))
 
 
     for maint in maints[pfile]:

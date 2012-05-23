@@ -39,10 +39,10 @@
 ## packagedir = /path/to/packages
 ## sender = your email address
 ## logfile = file to write log to (you might want to rotate/compress/examine it)
-## maintfile = file listing packages and their maintainers, with format:
+## maintfile = file listing files and their maintainers, with format:
 ##
-## package1   email1
-## package2   email2,email3
+## package1/file1   email1
+## package2/file2   email2,email3
 ##
 ## Use "nomail" for the email field to not send a mail.
 ##
@@ -219,13 +219,13 @@ except Exception as err:
     lfile.write('Error opening maintfile: %s\n' % str(err))
     sys.exit(1)
 
-## Each element is package: maint1, maint2, ...
+## Each element is package/file: maint1, maint2, ...
 maints = {}
 
 for line in mfile:
     if re.match( '#| *$', line ): continue
-    (pack, maint) = line.split()
-    maints[pack] = maint.split(',')
+    (pfile, maint) = line.split()
+    maints[pfile] = maint.split(',')
 
 mfile.close()
 
@@ -239,8 +239,8 @@ if opts.overmaintfile:
 
     for line in ofile:
         if re.match( '#| *$', line ): continue
-        (pack, maint) = line.split()
-        maints[pack] = maint.split(',')
+        (pfile, maint) = line.split()
+        maints[pfile] = maint.split(',')
 
     ofile.close()
 
@@ -266,7 +266,7 @@ if resent_via == message['x-resent-via']:
 
 
 start = False
-packs_seen = []
+pfiles_seen = []
 maints_seen = []
 
 for line in text.splitlines():
@@ -280,27 +280,28 @@ for line in text.splitlines():
     if re.match( ' *$', line ): break
 
 
-    reg = re.match( 'packages/([^/]+)', line.strip() )
+    reg = re.match( 'packages/([^ ]+)', line.strip() )
     if not reg: break
 
 
-    pack = reg.group(1)
+    pfile = reg.group(1)
 
-    lfile.write('Package: %s\n' % pack)
+    lfile.write('File: %s\n' % pfile)
 
-    if pack in packs_seen:
-        lfile.write('Already seen this package\n')
+    ## Should not be possible for files (rather than packages)...
+    if pfile in pfiles_seen:
+        lfile.write('Already seen this file\n')
         continue
 
-    packs_seen.append(pack)
+    pfiles_seen.append(pfile)
 
 
-    if not pack in maints:
+    if not pfile in maints:
         lfile.write('Unknown maintainer\n')
         continue
 
 
-    for maint in maints[pack]:
+    for maint in maints[pfile]:
 
         lfile.write('Maint: %s\n' % maint)
 

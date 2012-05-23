@@ -160,7 +160,8 @@ def scan_dir(dir, outfile=None):
 
 
 usage="""usage: %prog <-p /path/to/packages> <-m maintfile>
-   <-l logfile -s sender|--create> [-o overmaintfile] [--sendmail] [--debug]
+   <-l logfile -s sender|--create> [-o overmaintfile] [--prefix prefix]
+   [--sendmail] [--debug]
 Take an emacs-diffs mail on stdin, and forward it to the maintainer(s)."""
 
 parser = optparse.OptionParser()
@@ -183,6 +184,8 @@ parser.add_option( "--no-scan", dest="noscan", default=False,
 parser.add_option( "--no-update", dest="noupdate", default=False,
                    action="store_true",
                    help="do not update the maintfile")
+parser.add_option( "--prefix", dest="prefix", default="packages/",
+                   help="prefix to remove from modified file name [default: %default]")
 parser.add_option( "--sendmail", dest="sendmail", default=False,
                    action="store_true", help="use sendmail rather than smtp")
 parser.add_option( "--debug", dest="debug", default=False,
@@ -289,14 +292,17 @@ for line in text.splitlines():
 
     if not start: continue
 
-    if re.match( ' *$', line ): break
+    ## An empty line or a line with non-empty first character.
+    if re.match( '( *$|[^ ])', line ): break
 
 
-    reg = re.match( 'packages/([^ ]+)', line.strip() )
-    if not reg: break
+    if opts.prefix:
+        reg = re.match( '%s([^ ]+)' % opts.prefix, line.strip() )
+        if not reg: continue
+        pfile = reg.group(1)
+    else:
+        pfile = line.strip()
 
-
-    pfile = reg.group(1)
 
     lfile.write('File: %s\n' % pfile)
 

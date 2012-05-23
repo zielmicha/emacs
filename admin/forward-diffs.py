@@ -90,7 +90,7 @@ if not opts.sender:
 
 
 if not os.path.isdir(opts.packagedir):
-    sys.stderr.write('Error reading packagedir\n')
+    sys.stderr.write('No such directory: %s\n' % opts.packagedir)
     sys.exit(1)
 
 
@@ -111,7 +111,7 @@ except Exception as err:
 maints = {}
 
 for line in mfile:
-    if re.match( '^#|^ *$', line ): continue
+    if re.match( '#| *$', line ): continue
     (pack, maint) = line.split()
     maints[pack] = maint.split(',')
 
@@ -126,7 +126,7 @@ if opts.overmaintfile:
         sys.exit(1)
 
     for line in ofile:
-        if re.match( '^#|^ *$', line ): continue
+        if re.match( '#| *$', line ): continue
         (pack, maint) = line.split()
         maints[pack] = maint.split(',')
 
@@ -159,16 +159,16 @@ maints_seen = []
 
 for line in text.splitlines():
 
-    if re.match( '^modified:$', line ):
+    if re.match( 'modified:$', line ):
         start = True
         continue
 
     if not start: continue
 
-    if re.match( '^ *$', line ): break
+    if re.match( ' *$', line ): break
 
 
-    reg = re.match( '^packages/([^/]+)', line.strip() )
+    reg = re.match( 'packages/([^/]+)', line.strip() )
     if not reg: break
 
 

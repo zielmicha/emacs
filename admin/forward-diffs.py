@@ -35,7 +35,8 @@
 
 ## :0c
 ## * ^TO_emacs-elpa-diffs@gnu\.org
-## | forward-diffs.py -p packagedir -m maintfile -l logfile -s sender
+## | forward-diffs.py -p packagedir -m maintfile -l logfile \
+## -o overmaint -s sender
 
 ## where 
 
@@ -49,7 +50,7 @@
 ##
 ## Use "nomail" for the email field to not send a mail.
 ##
-## overmaintfile = like maintfile, but takes precedence over it.
+## overmaint = like maintfile, but takes precedence over it.
 
 ### Code:
 

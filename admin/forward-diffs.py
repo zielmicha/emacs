@@ -23,14 +23,20 @@
 ## Forward emails from the emacs-elpa-diffs mailing list to the
 ## maintainer(s) of the modified files.
 
-## Example usage from procmail (all arguments are compulsory):
+## Two modes of operation:
+
+## 1) Create the maintfile (really this is just an optimization):
+## forward-diffs.py --create -p packagesdir -m maintfile
+
+## 2) Call from eg procmail to forward diffs.  Example usage:
 
 ## :0c
 ## * ^TO_emacs-elpa-diffs@gnu\.org
-## | forward-diffs.py -m maintfile -l logfile -s sender
+## | forward-diffs.py -p packagedir -m maintfile -l logfile -s sender
 
 ## where 
 
+## packagedir = /path/to/packages
 ## sender = your email address
 ## logfile = file to write log to (you might want to rotate/compress/examine it)
 ## maintfile = file listing packages and their maintainers, with format:
@@ -52,8 +58,104 @@ import smtplib
 import datetime
 import os
 
-usage="""usage: %prog <-m maintfile> <-l logfile> <-s sender>
-   <-p /path/to/packages> [-o overmaintfile] [--sendmail] [--debug]
+
+## Scan FILE for Author or Maintainer (preferred) headers.
+## Return a list of all email addresses found in MAINTS.
+def scan_file(file, maints):
+
+    try:
+        fd = open( file, 'r')
+    except Exception as err:
+        lfile.write('Error opening file %s: %s\n' % (file, str(err)))
+        return 1
+
+    ## Max number of lines to scan looking for a maintainer.
+    ## (20 seems to be the highest at present).
+    max_lines = 50
+    nline = 0
+    cont = 0
+    type = ""
+
+    for line in fd:
+
+        nline += 1
+
+        if ( nline > max_lines ): break
+
+        ## Try and de-obfuscate.  Worth it?
+        line = re.sub( '(?i) AT ', '@', line )
+        line = re.sub( '(?i) DOT ', '.', line )
+
+        if cont:           # continued header?
+            reg = re.match( ('%s[ \t]+[^:]*?<?([\w.-]+@[\w.-]+)>?' % prefix), line, re.I )
+            if not reg:         # not a continued header
+                cont = 0
+                prefix = ""
+                if ( type == "maint" ): break
+                type = ""
+
+        ## Check for one header immediately after another.
+        if not cont:
+            reg = re.match( '([^ ]+)? *(Author|Maintainer)s?: .*?<?([\w.-]+@[\w.-]+)>?', line, re.I )
+            
+
+        if not reg: continue
+
+        if cont:
+            email = reg.group(1)
+            maints.append(email)
+        else:
+            cont = 1
+            prefix = reg.group(1) or ""
+            type = reg.group(2)
+            email = reg.group(3)
+            type = "maint" if re.search( 'Maintainer', type, re.I ) else "auth"
+            ## maints = [] does the wrong thing.
+            if type == "maint": del maints[:]
+            maints.append(email)
+
+    fd.close()
+
+
+## Scan all the files under dir for maintainer information.
+## Write to stdout, or optional argument outfile (which is overwritten).
+def scan_dir(dir, outfile=None):
+
+    dir = re.sub( '/+$', '', dir) + '/' # ensure trailing /
+
+    if not os.path.isdir(dir):
+        sys.stderr.write('No such directory: %s\n' % dir)
+        sys.exit(1)
+
+    fd = 0
+    if outfile:
+        try:
+            fd = open( outfile, 'w' )
+        except Exception as err:
+            sys.stderr.write("Error opening `%s': %s\n" % (outfile, str(err)))
+            sys.exit(1)
+
+
+    for dirpath, dirnames, filenames in os.walk(dir):
+        for file in filenames:
+            path = os.path.join(dirpath, file)
+            maints = []
+            scan_file(path, maints)
+            ## This would skip printing empty maints.
+            ## That would mean we would scan the file each time for no reason.
+##            if not maints: continue
+            path = re.sub( '^%s' % dir, '', path )
+            string = "%-50s %s\n" % (path, ",".join(maints))
+            if fd:
+                fd.write(string)
+            else:
+                print string,
+
+    if fd: fd.close()
+
+
+usage="""usage: %prog <-p /path/to/packages> <-m maintfile>
+   <-l logfile -s sender|--create> [-o overmaintfile] [--sendmail] [--debug]
 Take a GNU ELPA diff on stdin, and forward it to the maintainer(s)."""
 
 parser = optparse.OptionParser()
@@ -68,6 +170,8 @@ parser.add_option( "-p", dest="packagedir", default=None,
                    help="path to packages directory")
 parser.add_option( "-s", dest="sender", default=None,
                    help="sender address for forwards")
+parser.add_option( "--create", dest="create", default=False,
+                   action="store_true", help="create maintfile")
 parser.add_option( "--sendmail", dest="sendmail", default=False,
                    action="store_true", help="use sendmail rather than smtp")
 parser.add_option( "--debug", dest="debug", default=False,
@@ -76,8 +180,6 @@ parser.add_option( "--debug", dest="debug", default=False,
 
 ( opts, args ) = parser.parse_args()
 
-if not opts.logfile:
-    parser.error('No logfile specified')
 
 if not opts.maintfile:
     parser.error('No maintfile specified')
@@ -85,13 +187,23 @@ if not opts.maintfile:
 if not opts.packagedir:
     parser.error('No packagedir specified')
 
-if not opts.sender:
-    parser.error('No sender specified')
-
-
 if not os.path.isdir(opts.packagedir):
     sys.stderr.write('No such directory: %s\n' % opts.packagedir)
     sys.exit(1)
+
+
+if not opts.create:
+    if not opts.logfile:
+        parser.error('No logfile specified')
+
+    if not opts.sender:
+        parser.error('No sender specified')
+
+
+## Create the maintfile.
+if opts.create:
+    scan_dir( opts.packagedir, opts.maintfile )
+    sys.exit()
 
 
 try:

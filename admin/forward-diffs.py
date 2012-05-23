@@ -1,5 +1,5 @@
 #!/usr/bin/python
-### forward-diffs.py --- forward emacs-elpa-diffs mails to maintainers
+### forward-diffs.py --- forward emacs-diffs mails to maintainers
 
 ## Copyright (C) 2012 Free Software Foundation, Inc.
 
@@ -20,7 +20,7 @@
 
 ### Commentary:
 
-## Forward emails from the emacs-elpa-diffs mailing list to the
+## Forward emails from an emacs-diffs style mailing list to the
 ## maintainer(s) of the modified files.
 
 ## Two modes of operation:
@@ -161,7 +161,7 @@ def scan_dir(dir, outfile=None):
 
 usage="""usage: %prog <-p /path/to/packages> <-m maintfile>
    <-l logfile -s sender|--create> [-o overmaintfile] [--sendmail] [--debug]
-Take a GNU ELPA diff on stdin, and forward it to the maintainer(s)."""
+Take an emacs-diffs mail on stdin, and forward it to the maintainer(s)."""
 
 parser = optparse.OptionParser()
 parser.set_usage ( usage )
@@ -262,7 +262,7 @@ stdin = sys.stdin
 text = stdin.read()
 
 
-resent_via = 'GNU ELPA diff forwarder'
+resent_via = 'GNU Emacs diff forwarder'
 
 message = email.message_from_string( text )
 

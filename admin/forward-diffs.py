@@ -146,7 +146,8 @@ def scan_dir(dir, outfile=None):
             scan_file(path, maints)
             ## This would skip printing empty maints.
             ## That would mean we would scan the file each time for no reason.
-##            if not maints: continue
+            ## But empty maintainers are an error at present.
+            if not maints: continue
             path = re.sub( '^%s' % dir, '', path )
             string = "%-50s %s\n" % (path, ",".join(maints))
             if fd:
@@ -227,6 +228,7 @@ maints = {}
 
 for line in mfile:
     if re.match( '#| *$', line ): continue
+    ## FIXME error here if empty maintainer.
     (pfile, maint) = line.split()
     maints[pfile] = maint.split(',')
 

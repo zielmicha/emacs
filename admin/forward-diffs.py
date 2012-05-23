@@ -177,6 +177,12 @@ parser.add_option( "-s", dest="sender", default=None,
                    help="sender address for forwards")
 parser.add_option( "--create", dest="create", default=False,
                    action="store_true", help="create maintfile")
+parser.add_option( "--no-scan", dest="noscan", default=False,
+                   action="store_true",
+                   help="don't scan for maintainers; implies --no-update")
+parser.add_option( "--no-update", dest="noupdate", default=False,
+                   action="store_true",
+                   help="do not update the maintfile")
 parser.add_option( "--sendmail", dest="sendmail", default=False,
                    action="store_true", help="use sendmail rather than smtp")
 parser.add_option( "--debug", dest="debug", default=False,
@@ -304,26 +310,28 @@ for line in text.splitlines():
 
     if not pfile in maints:
 
-        lfile.write('Unknown maintainer, scanning file...\n')
+        lfile.write('Unknown maintainer\n')
 
+        if opts.noscan: continue
+
+        lfile.write('Scanning file...\n')
         thismaint = []
         thisfile = os.path.join( opts.packagedir, pfile )
-
         scan_file( thisfile, thismaint )
-
         if not thismaint: continue
 
         maints[pfile] = thismaint
 
         ## Append maintainer to file.
-        try:
-            mfile = open( opts.maintfile, 'a' )
-            string = "%-50s %s\n" % (pfile, ",".join(thismaint))
-            mfile.write(string)
-            mfile.close()
-            lfile.write('Appended to maintfile\n')
-        except Exception as err:
-            lfile.write('Error appending to maintfile: %s\n' % str(err))
+        if not opts.noupdate:
+            try:
+                mfile = open( opts.maintfile, 'a' )
+                string = "%-50s %s\n" % (pfile, ",".join(thismaint))
+                mfile.write(string)
+                mfile.close()
+                lfile.write('Appended to maintfile\n')
+            except Exception as err:
+                lfile.write('Error appending to maintfile: %s\n' % str(err))
 
 
     for maint in maints[pfile]:

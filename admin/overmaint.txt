@@ -1,0 +1,9 @@
+# This file lists files and the email addresses of their maintainers.
+# It is used by the forward-diffs.py script.
+# This file overrides the automatically generated maintfile.
+# Use nomail to suppress sending mail.
+# File names are relative to the packages/ directory.
+# Lines starting with # are ignored.
+# Examples:
+#some-package/some-file.el    nomail
+#some-package/otherfile.el    none@example.com

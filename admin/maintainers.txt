@@ -1,4 +1,0 @@
-# This file lists packages and the email addresses of their maintainers.
-# It is used by the forward-diffs.py script.
-# Lines starting with # are ignored.
-jgraph-mode     monnier@iro.umontreal.ca

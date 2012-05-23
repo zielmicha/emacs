@@ -47,8 +47,11 @@
 ##
 ## package1/file1   email1
 ## package2/file2   email2,email3
+## package3         email4
 ##
 ## Use "nomail" for the email field to not send a mail.
+## An entry that is a directory applies to all files in that directory
+## that do not have specific maintainers.
 ##
 ## overmaint = like maintfile, but takes precedence over it.
 
@@ -318,26 +321,41 @@ for line in text.splitlines():
 
         lfile.write('Unknown maintainer\n')
 
-        if opts.noscan: continue
+        if not opts.noscan:
 
-        lfile.write('Scanning file...\n')
-        thismaint = []
-        thisfile = os.path.join( opts.packagedir, pfile )
-        scan_file( thisfile, thismaint )
-        if not thismaint: continue
+            lfile.write('Scanning file...\n')
+            thismaint = []
+            thisfile = os.path.join( opts.packagedir, pfile )
+            scan_file( thisfile, thismaint )
 
-        maints[pfile] = thismaint
+            if thismaint:
+                maints[pfile] = thismaint
 
-        ## Append maintainer to file.
-        if not opts.noupdate:
-            try:
-                mfile = open( opts.maintfile, 'a' )
-                string = "%-50s %s\n" % (pfile, ",".join(thismaint))
-                mfile.write(string)
-                mfile.close()
-                lfile.write('Appended to maintfile\n')
-            except Exception as err:
-                lfile.write('Error appending to maintfile: %s\n' % str(err))
+                ## Append maintainer to file.
+                if not opts.noupdate:
+                    try:
+                        mfile = open( opts.maintfile, 'a' )
+                        string = "%-50s %s\n" % (pfile, ",".join(thismaint))
+                        mfile.write(string)
+                        mfile.close()
+                        lfile.write('Appended to maintfile\n')
+                    except Exception as err:
+                        lfile.write('Error appending to maintfile: %s\n' % 
+                                    str(err))
+
+    ## Didn't scan, or scanning did not work.
+    ## Look for a directory maintainer.
+    if not pfile in maints:
+        lfile.write('No file maintainer, trying directories...\n')
+        while True:
+            (pfile, tail) = os.path.split(pfile)
+            if not pfile: break
+            if pfile in maints: break
+
+
+    if not pfile in maints:
+        lfile.write('No maintainer, skipping\n')
+        continue
 
 
     for maint in maints[pfile]:

@@ -1,12 +1,11 @@
 ;;; vlf.el --- View Large Files
 
-;; Copyright (C) 2006  Mathias Dahl
+;; Copyright (C) 2006, 2012  Free Software Foundation, Inc.
 
-;; Version: 0.1.2
-;; Keywords: files, helpers, utilities
-;; Author: Mathias Dahl <mathias.dahl@gmail.com>
-;; Maintainer: Mathias Dahl
-;; URL: http://www.emacswiki.org/cgi-bin/wiki/VLF
+;; Version: 0.2
+;; Keywords: large files, utilities
+;; Authors: 2006 Mathias Dahl <mathias.dahl@gmail.com>
+;;          2012 Sam Steingold <sds@gnu.org>
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -28,190 +27,119 @@
 ;; After reading the Nth post on Gnu Emacs Help about Viewing Large
 ;; Files in Emacs, it itched so much that I decided to make a try.  It
 ;; helped quite a lot when Kevin Rodgers posted a snippet on how to
-;; use `insert-file-contents' to extract part of a file.  At first I
-;; made a try using head and tail and that worked too, but using
-;; internal Emacs commands is nicer.  Here is the code to extract data
-;; using head and tail in case someone wanna try that out in the
-;; future:
-
-;; (defun vlf-extract-part-of-file (file from to)
-;;   "Returns bytes in FILE from FROM to TO."
-;;   (let ((size (vlf-file-size file)))
-;;     (if (or (> from size)
-;;             (> to size))
-;;         (error "From or to is larger that the file size"))
-;;     (with-temp-buffer
-;;       (shell-command
-;;        (format "head --bytes %d %s | tail --bytes %d"
-;; 	       to file (+ (- to from) 1)) t)
-;;       (buffer-substring (point-min) (point-max)))))
-
-;;; History:
-;;
-;; - Wed Jan 10 00:13:45 2007
-;;
-;;    First version created and released into the wild.
-;;
-;; - Wed Jan 10 18:58:47 2007
-;;
-;;    0.1.2
-;;
-;;    Added option to use external tools (head and tail) for
-;;    extracting the data from the file.
-;;
-;;    Refactored buffer name format code into a new function.
-;;
-;;    Started to fiddle with float/integer conversions.
-;;
-
-;;; Bugs
-;;
-;; Probably some. Feel free to fix them :)
+;; use `insert-file-contents' to extract part of a file.
 
 ;;; Code:
 
 (defgroup vlf nil
-  "Browse large files in Emacs"
+  "View Large Files in Emacs."
   :prefix "vlf-"
   :group 'files)
 
-(defcustom vlf-batch-size 1000
-  "Defines how large each batch of file data is."
+(defcustom vlf-batch-size 1024
+  "Defines how large each batch of file data is (in bytes)."
   :type 'integer
   :group 'vlf)
 
-(defcustom vlf-external-extraction nil
-  "How to extract the data from a file.
-`nil' means to use internal extraction, using
-`insert-file-contents'. `t' means to use external `head' and
-`tail' tools."
-  :type 'boolean
-  :group 'vlf)
+;; Keep track of file position.
+(defvar vlf-start-pos)
+(defvar vlf-end-pos)
+(defvar vlf-file-size)
 
-(defvar vlf-current-start-pos 1
-  "Keeps track of file position.")
-
-(defvar vlf-current-batch-size nil
-  "Keeps track of current batch size.")
-
-(defvar vlf-current-file nil
-  "File that is currently viewed.")
-
-(defvar vlf-current-file-size 0
-  "Size of current file.")
-
-(defvar vlf-mode-map (make-sparse-keymap)
+(defvar vlf-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [M-next] 'vlf-next-batch)
+    (define-key map [M-prior] 'vlf-prev-batch)
+    (define-key map [C-+] 'vlf-change-batch-size)
+    map)
   "Keymap for `vlf-mode'.")
 
-(defun vlf-define-keymap ()
-  "Define keymap for `vlf-mode'."
-  (define-key vlf-mode-map [next] 'vlf-next)
-  (define-key vlf-mode-map [prior] 'vlf-prev)
-  (define-key vlf-mode-map "q" 'vlf-quit))
+(define-derived-mode vlf-mode special-mode "VLF"
+  "Mode to browse large files in."
+  (setq buffer-read-only t)
+  (set-buffer-modified-p nil)
+  (make-local-variable 'vlf-batch-size)
+  (make-local-variable 'vlf-start-pos)
+  (make-local-variable 'vlf-file-size))
 
-(define-derived-mode vlf-mode
-  fundamental-mode "vlf-mode"
-  "Mode to browse large files in.
-See `vlf' for details."
-  (vlf-define-keymap)
-  (toggle-read-only 1)
-  (message "vlf-mode enabled"))
-
-(defun vlf-file-size (file)
-  "Get size of FILE."
-  (nth 7 (file-attributes file)))
-
-(defun vlf-quit ()
-  "Quit vlf."
-  (interactive)
-  (kill-buffer (current-buffer)))
-
-(defun vlf-extract-with-head-and-tail (file from to)
-  "Returns bytes in FILE from FROM to TO."
-  (let ((size (vlf-file-size file)))
-    (if (or (> from size)
-            (> to size))
-        (error "From or to is larger that the file size"))
-    (with-temp-buffer
-      (shell-command
-       (format "head --bytes %.0f \"%s\" | tail --bytes %.0f"
-	       (float to) (expand-file-name file)
-               (float (+ (- to from) 1))) t)
-      (buffer-substring (point-min) (point-max)))))
-
-(defun vlf-insert-batch ()
-  "Insert current batch of data."
-  (let* ((beg (1- vlf-current-start-pos))
-        (end (+ beg vlf-current-batch-size)))
-    (if vlf-external-extraction
-        (insert
-         (vlf-extract-with-head-and-tail
-          vlf-current-file (1+ beg) end))
-      (insert-file-contents
-       vlf-current-file nil
-       (floor beg) (floor end)))))
+(defun vlf-change-batch-size (decrease)
+  "Change the buffer-local value of `vlf-batch-size'.
+Normally, the value is doubled;
+with the prefix argument it is halved."
+  (interactive "P")
+  (or (assq 'vlf-batch-size (buffer-local-variables))
+      (error "%s is not local in this buffer" 'vlf-batch-size))
+  (setq vlf-batch-size
+        (if decrease
+            (/ vlf-batch-size 2)
+            (* vlf-batch-size 2)))
+  (vlf-update-buffer-name))
 
 (defun vlf-format-buffer-name ()
   "Return format for vlf buffer name."
-  (format "%s[%.0f,%.0f(%.0f)]"
-          (file-name-nondirectory vlf-current-file)
-          vlf-current-start-pos
-          (1- (+ vlf-current-start-pos
-                 vlf-current-batch-size))
-          vlf-current-file-size))
+  (format "%s(%s)[%d,%d](%d)"
+          (file-name-nondirectory buffer-file-name)
+          (file-size-human-readable vlf-file-size)
+          vlf-start-pos vlf-end-pos vlf-batch-size))
 
-(defun vlf-next ()
-  "Display the next batch of file data."
-  (interactive)
+(defun vlf-update-buffer-name ()
+  "Update the current buffer name."
+  (rename-buffer (vlf-format-buffer-name) t))
+
+(defun vlf-next-batch (append)
+  "Display the next batch of file data.
+Append to the existing buffer when the prefix argument is supplied."
+  (interactive "P")
+  (when (= vlf-end-pos vlf-file-size)
+    (error "Already at EOF"))
   (let ((inhibit-read-only t)
-        left next-start-pos
-        (size (vlf-file-size vlf-current-file)))
-    (setq next-start-pos (float (+ vlf-current-start-pos
-                                   vlf-batch-size)))
-    (if (> next-start-pos size)
-        (message "End of file")
-      (setq vlf-current-batch-size
-            vlf-batch-size
-            vlf-current-start-pos next-start-pos
-            left (1+ (- size vlf-current-start-pos)))
-      (if (< left vlf-current-batch-size)
-          (setq vlf-current-batch-size left))
-      (erase-buffer)
-      (vlf-insert-batch)
-      (rename-buffer
-       (vlf-format-buffer-name)))))
+        (end (min vlf-file-size (+ vlf-end-pos vlf-batch-size))))
+    (goto-char (point-max))
+    ;; replacing `erase-buffer' with replace arg to `insert-file-contents'
+    ;; hangs emacs
+    (unless append (erase-buffer))
+    (insert-file-contents buffer-file-name nil vlf-end-pos end)
+    (unless append
+      (setq vlf-start-pos vlf-end-pos))
+    (setq vlf-end-pos end)
+    (set-buffer-modified-p nil)
+    (vlf-update-buffer-name)))
 
-(defun vlf-prev ()
-  "Display the previous batch of file data."
-  (interactive)
-  (if (= 1 vlf-current-start-pos)
-      (message "At beginning of file")
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (setq vlf-current-start-pos (- vlf-current-start-pos
-                                     vlf-batch-size)
-            vlf-current-batch-size vlf-batch-size)
-      (vlf-insert-batch)
-      (rename-buffer
-       (vlf-format-buffer-name)))))
+(defun vlf-prev-batch (prepend)
+  "Display the previous batch of file data.
+Prepend to the existing buffer when the prefix argument is supplied."
+  (interactive "P")
+  (when (= vlf-start-pos 0)
+    (error "Already at BOF"))
+  (let ((inhibit-read-only t)
+        (start (max 0 (- vlf-start-pos vlf-batch-size))))
+    (goto-char (point-min))
+    (unless prepend (erase-buffer))
+    (insert-file-contents buffer-file-name nil start vlf-start-pos)
+    (unless prepend
+      (setq vlf-end-pos vlf-start-pos))
+    (setq vlf-start-pos start)
+    (set-buffer-modified-p nil)
+    (vlf-update-buffer-name)))
 
 (defun vlf (file)
-  "View a large file in Emacs FILE is the file to open.
+  "View a Large File in Emacs.
+FILE is the file to open.
 Batches of the file data from FILE will be displayed in a
-read-only buffer.  You can customize the amount of bytes to
-display by customizing `vlf-batch-size'."
+ read-only buffer.
+You can customize the number of bytes to
+ display by customizing `vlf-batch-size'."
   (interactive "fFile to open: ")
-  (setq vlf-current-file file
-        vlf-current-start-pos 1
-        vlf-current-file-size (vlf-file-size file)
-        vlf-current-batch-size
-        (1- (+ vlf-current-start-pos
-               vlf-batch-size)))
-  (switch-to-buffer
-   (generate-new-buffer (vlf-format-buffer-name)))
-  (erase-buffer)
-  (vlf-insert-batch)
-  (vlf-mode))
+  (with-current-buffer (generate-new-buffer "*vlf*")
+    (setq buffer-file-name file
+          vlf-start-pos 0
+          vlf-end-pos vlf-batch-size
+          vlf-file-size (nth 7 (file-attributes file)))
+    (vlf-update-buffer-name)
+    (insert-file-contents buffer-file-name nil
+                          vlf-start-pos vlf-end-pos nil)
+    (vlf-mode)
+    (display-buffer (current-buffer))))
 
 (provide 'vlf)
 

@@ -50,7 +50,7 @@
   (let ((map (make-sparse-keymap)))
     (define-key map [M-next] 'vlf-next-batch)
     (define-key map [M-prior] 'vlf-prev-batch)
-    (define-key map [C-+] 'vlf-change-batch-size)
+    (define-key map (kbd "C-+") 'vlf-change-batch-size)
     map)
   "Keymap for `vlf-mode'.")
 

@@ -23,11 +23,17 @@
 ;; Boston, MA 02111-1307, USA.
 
 ;;; Commentary:
-;;
-;; After reading the Nth post on Gnu Emacs Help about Viewing Large
-;; Files in Emacs, it itched so much that I decided to make a try.  It
-;; helped quite a lot when Kevin Rodgers posted a snippet on how to
-;; use `insert-file-contents' to extract part of a file.
+
+;; This package provides the M-x vlf command, which visits part of a
+;; large file in a read-only buffer without visiting the entire file.
+;; The buffer uses VLF mode, which defines the commands M-<next>
+;; (vlf-next-batch) and M-<prior> (vlf-prev-batch) to visit other
+;; parts of the file.  The option `vlf-batch-size' specifies the size
+;; of each batch, in bytes.
+
+;; This package was inspired by a snippet posted by Kevin Rodgers,
+;; showing how to use `insert-file-contents' to extract part of a
+;; file.
 
 ;;; Code:
 

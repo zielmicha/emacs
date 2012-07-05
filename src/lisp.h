@@ -2059,6 +2059,18 @@ extern EMACS_INT specpdl_size;
 
 #define SPECPDL_INDEX()	((int) (specpdl_ptr - specpdl))
 
+struct backtrace
+{
+  struct backtrace *next;
+  Lisp_Object *function;
+  Lisp_Object *args;	/* Points to vector of args.  */
+  ptrdiff_t nargs;	/* Length of vector.  */
+  /* Nonzero means call value of debugger when done with this operation.  */
+  unsigned int debug_on_exit : 1;
+};
+
+extern struct backtrace *backtrace_list;
+
 /* Everything needed to describe an active condition case.  */
 struct handler
   {
@@ -2551,6 +2563,11 @@ extern void init_syntax_once (void);
 extern void syms_of_syntax (void);
 
 /* Defined in fns.c */
+/* Combine two integers X and Y for hashing.  The result might not fit
+   into a Lisp integer.  */
+#define SXHASH_COMBINE(X, Y)						\
+  ((((EMACS_UINT) (X) << 4) + ((EMACS_UINT) (X) >> (BITS_PER_EMACS_INT - 4))) \
+   + (EMACS_UINT) (Y))
 extern Lisp_Object QCrehash_size, QCrehash_threshold;
 enum { NEXT_ALMOST_PRIME_LIMIT = 11 };
 extern EMACS_INT next_almost_prime (EMACS_INT);
@@ -3560,6 +3577,9 @@ extern int have_menus_p (void);
 /* Defined in dbusbind.c */
 void syms_of_dbusbind (void);
 #endif
+
+/* Defined in profiler.c */
+extern void syms_of_profiler (void);
 
 #ifdef DOS_NT
 /* Defined in msdos.c, w32.c */

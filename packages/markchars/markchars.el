@@ -198,5 +198,5 @@ The default is to mark nonascii chars with a magenta underline."
   (lambda () (markchars-mode 1))
   :group 'markchars)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(provide 'markchars)
 ;;; markchars.el ends here

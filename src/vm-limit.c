@@ -165,6 +165,7 @@ get_lim_data (void)
 static void
 check_memory_limits (void)
 {
+  #if 0
 #ifdef REL_ALLOC
   extern POINTER (*real_morecore) (long);
 #endif
@@ -235,6 +236,7 @@ check_memory_limits (void)
 
   if (EXCEEDS_LISP_PTR (cp))
     (*warn_function) ("Warning: memory in use exceeds lisp pointer size");
+  #endif
 }
 
 #if !defined (CANNOT_DUMP) || !defined (SYSTEM_MALLOC)
@@ -284,6 +286,7 @@ start_of_data (void)
 void
 memory_warnings (POINTER start, void (*warnfun) (const char *))
 {
+  #if 0
   extern void (* __after_morecore_hook) (void);     /* From gmalloc.c */
 
   if (start)
@@ -293,6 +296,7 @@ memory_warnings (POINTER start, void (*warnfun) (const char *))
 
   warn_function = warnfun;
   __after_morecore_hook = check_memory_limits;
+  #endif
 
   /* Force data limit to be recalculated on each run.  */
   lim_data = 0;

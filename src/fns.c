@@ -2523,7 +2523,7 @@ advisable.  */)
   (Lisp_Object use_floats)
 {
   double load_ave[3];
-  int loads = getloadavg (load_ave, 3);
+  int loads = -1 /*getloadavg (load_ave, 3)*/;
   Lisp_Object ret = Qnil;
 
   if (loads < 0)

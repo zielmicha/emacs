@@ -2032,7 +2032,8 @@ on the system, we copy the SELinux context of FILE to NEWNAME.  */)
 	    }
 	}
       if (fchmod (ofd, st.st_mode & mode_mask) != 0)
-	report_file_error ("Doing chmod", Fcons (newname, Qnil));
+// on Android sdcard chmod will fail with ENOPERM
+	; /*report_file_error ("Doing chmod", Fcons (newname, Qnil));*/
     }
 #endif	/* not MSDOS */
 
@@ -2980,7 +2981,7 @@ symbolic notation, like the `chmod' command from GNU Coreutils.  */)
   encoded_absname = ENCODE_FILE (absname);
 
   if (chmod (SSDATA (encoded_absname), XINT (mode) & 07777) < 0)
-    report_file_error ("Doing chmod", Fcons (absname, Qnil));
+    ; /*report_file_error ("Doing chmod", Fcons (absname, Qnil));*/
 
   return Qnil;
 }

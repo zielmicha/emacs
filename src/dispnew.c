@@ -4675,7 +4675,7 @@ update_frame_1 (struct frame *f, int force_p, int inhibit_id_p)
 	      FILE *display_output = FRAME_TTY (f)->output;
 	      if (display_output)
 		{
-		  int outq = PENDING_OUTPUT_COUNT (display_output);
+		  int outq = 0/*PENDING_OUTPUT_COUNT (display_output)*/;
 		  if (outq > 900
 		      || (outq > 20 && ((i - 1) % preempt_count == 0)))
 		    {

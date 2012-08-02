@@ -22,6 +22,7 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <config.h>
 #include <stdio.h>
 #include <setjmp.h>
+#include "config.h"
 #include "lisp.h"
 #include "character.h"
 #include "buffer.h"
@@ -764,17 +765,17 @@ append to existing target file.  */)
       fclose (stderr);
       UNBLOCK_INPUT;
     }
-  stderr = initial_stderr_stream;
+  android_set_stderr(initial_stderr_stream);
   initial_stderr_stream = NULL;
 
   if (STRINGP (file))
     {
       file = Fexpand_file_name (file, Qnil);
       initial_stderr_stream = stderr;
-      stderr = fopen (SSDATA (file), NILP (append) ? "w" : "a");
+      android_set_stderr( fopen (SSDATA (file), NILP (append) ? "w" : "a") );
       if (stderr == NULL)
 	{
-	  stderr = initial_stderr_stream;
+	  android_set_stderr(initial_stderr_stream);
 	  initial_stderr_stream = NULL;
 	  report_file_error ("Cannot open debugging output stream",
 			     Fcons (file, Qnil));

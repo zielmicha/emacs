@@ -357,7 +357,7 @@ memory_warning_signal (int sig)
    so that GDB can return from a breakpoint here.
    MSDOS has its own definition in msdos.c.  */
 
-#if ! defined (DOS_NT) && ! defined (NO_ABORT)
+#if ! defined (DOS_NT) && ! defined (NO_ABORT) && 0
 
 void
 abort (void)
@@ -1107,7 +1107,7 @@ Using an Emacs configured with --with-x-toolkit=lucid does not have this problem
 #if defined (USG5) && defined (INTERRUPT_INPUT)
       setpgrp ();
 #endif
-#if defined (HAVE_PTHREAD) && !defined (SYSTEM_MALLOC) && !defined (DOUG_LEA_MALLOC)
+#if 0
       {
         extern void malloc_enable_thread (void);
 

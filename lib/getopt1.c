@@ -16,6 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#if 0
 #ifdef _LIBC
 # include <getopt.h>
 #else
@@ -168,3 +169,4 @@ main (int argc, char **argv)
 }
 
 #endif /* TEST */
+#endif

@@ -6255,10 +6255,12 @@ process has been transmitted to the serial port.  */)
     send_process (proc, "\004", 1, Qnil);
   else if (EQ (XPROCESS (proc)->type, Qserial))
     {
+      #if 0
 #ifndef WINDOWSNT
       if (tcdrain (XPROCESS (proc)->outfd) != 0)
 	error ("tcdrain() failed: %s", emacs_strerror (errno));
 #endif /* not WINDOWSNT */
+      #endif
       /* Do nothing on Windows because writes are blocking.  */
     }
   else

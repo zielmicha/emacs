@@ -31,6 +31,7 @@
    time respectively.
 
    These macros are private to stat-time.h.  */
+
 #if defined HAVE_STRUCT_STAT_ST_ATIM_TV_NSEC
 # ifdef TYPEOF_STRUCT_STAT_ST_ATIM_IS_STRUCT_TIMESPEC
 #  define STAT_TIMESPEC(st, st_xtim) ((st)->st_xtim)

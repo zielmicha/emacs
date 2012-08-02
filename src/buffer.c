@@ -5089,7 +5089,8 @@ init_buffer (void)
   if (NILP (BVAR (&buffer_defaults, enable_multibyte_characters)))
     Fset_buffer_multibyte (Qnil);
 
-  pwd = get_current_dir_name ();
+  pwd = malloc(1024); /*get_current_dir_name ();*/
+  getcwd(pwd, 1023);
 
   if (!pwd)
     fatal ("`get_current_dir_name' failed: %s\n", strerror (errno));
